@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useCallback, useEffect, useMemo, useState } from "react";
 import type { Category } from "@/domain/categories/category";
 import { initialActionState } from "@/app/actions/action-state";
 import { updateCategoryAction } from "@/app/actions/category-actions";
+import { formatCurrency } from "@/lib/format";
 
 const bucketOptions = [
   { value: "NEEDS", label: "Needs" },
@@ -18,13 +19,14 @@ interface CategoryManagerProps {
 export function CategoryManager({ categories }: CategoryManagerProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [state, formAction] = useActionState(updateCategoryAction, initialActionState);
+  const safeAmount = useCallback((value?: number) => (typeof value === "number" && Number.isFinite(value) ? value : 0), []);
 
   useEffect(() => {
     if (state.status === "success") {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setEditingId(null);
     }
-  }, [state.status]);
+  }, [state]);
 
   const sorted = useMemo(
     () => [...categories].sort((a, b) => a.name.localeCompare(b.name)),
@@ -36,7 +38,7 @@ export function CategoryManager({ categories }: CategoryManagerProps) {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold">Editar categorías</h2>
-          <p className="text-sm text-slate-300">Actualiza el nombre o bucket para reequilibrar tu presupuesto.</p>
+          <p className="text-sm text-slate-300">Actualiza el nombre, bucket o monto ideal para reequilibrar tu presupuesto.</p>
         </div>
         <span className="text-sm text-slate-400">{sorted.length} en total</span>
       </div>
@@ -74,7 +76,18 @@ export function CategoryManager({ categories }: CategoryManagerProps) {
                         ))}
                       </select>
                     </label>
-                    <div className="flex gap-2">
+                    <label className="text-[11px] uppercase tracking-wide text-slate-400">
+                      Monto ideal
+                      <input
+                        name="idealMonthlyAmount"
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        defaultValue={safeAmount(category.idealMonthlyAmount)}
+                        className="mt-1 w-32 rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
+                      />
+                    </label>
+                    <div className="flex gap-2 pt-4 md:pt-0">
                       <button type="submit" className="rounded-full bg-emerald-400/90 px-3 py-2 text-xs font-semibold text-slate-900">
                         Guardar
                       </button>
@@ -98,6 +111,7 @@ export function CategoryManager({ categories }: CategoryManagerProps) {
                 <div>
                   <p className="font-medium">{category.name}</p>
                   <p className="text-xs uppercase tracking-wide text-slate-400">{bucketLabel}</p>
+                  <p className="text-xs text-slate-300">Ideal mensual {formatCurrency(safeAmount(category.idealMonthlyAmount))}</p>
                 </div>
                 <button
                   type="button"

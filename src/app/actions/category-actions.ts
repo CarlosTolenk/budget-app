@@ -5,15 +5,30 @@ import { z } from "zod";
 import { serverContainer } from "@/infrastructure/config/server-container";
 import { ActionState } from "./action-state";
 
+const amountSchema = z.preprocess(
+  (value) => {
+    if (typeof value === "number") {
+      return value;
+    }
+    if (typeof value === "string" && value.trim() !== "") {
+      return Number(value);
+    }
+    return 0;
+  },
+  z.number().min(0).max(1_000_000),
+);
+
 const schema = z.object({
   name: z.string().min(2),
   bucket: z.enum(["NEEDS", "WANTS", "SAVINGS"]),
+  idealMonthlyAmount: amountSchema,
 });
 
 export async function createCategoryAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
   const result = schema.safeParse({
     name: formData.get("name"),
     bucket: formData.get("bucket"),
+    idealMonthlyAmount: formData.get("idealMonthlyAmount"),
   });
   if (!result.success) {
     return { status: "error", message: "Datos inválidos para la categoría" };
@@ -23,6 +38,8 @@ export async function createCategoryAction(_prevState: ActionState, formData: Fo
     const { createCategoryUseCase } = serverContainer();
     await createCategoryUseCase.execute(result.data);
     revalidatePath("/");
+    revalidatePath("/budget");
+    revalidatePath("/transactions");
     return { status: "success", message: "Categoría creada" };
   } catch (error) {
     console.error(error);
@@ -34,6 +51,7 @@ const updateSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(2),
   bucket: z.enum(["NEEDS", "WANTS", "SAVINGS"]),
+  idealMonthlyAmount: amountSchema,
 });
 
 export async function updateCategoryAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
@@ -41,6 +59,7 @@ export async function updateCategoryAction(_prevState: ActionState, formData: Fo
     id: formData.get("id"),
     name: formData.get("name"),
     bucket: formData.get("bucket"),
+    idealMonthlyAmount: formData.get("idealMonthlyAmount"),
   });
 
   if (!result.success) {

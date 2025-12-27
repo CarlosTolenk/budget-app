@@ -2,6 +2,10 @@ import { CategoryRepository } from "@/domain/repositories";
 import { Category } from "@/domain/categories/category";
 import { memoryCategories } from "./memory-data";
 
+function sanitize(value: number): number {
+  return Number.isFinite(value) ? value : 0;
+}
+
 export class MemoryCategoryRepository implements CategoryRepository {
   private categories = memoryCategories;
 
@@ -13,11 +17,12 @@ export class MemoryCategoryRepository implements CategoryRepository {
     return this.categories.find((category) => category.id === id) ?? null;
   }
 
-  async create(input: { name: string; bucket: Category["bucket"] }): Promise<Category> {
+  async create(input: { name: string; bucket: Category["bucket"]; idealMonthlyAmount: number }): Promise<Category> {
     const category: Category = {
       id: `cat-${Math.random().toString(36).slice(2)}`,
       name: input.name,
       bucket: input.bucket,
+      idealMonthlyAmount: sanitize(input.idealMonthlyAmount),
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -26,7 +31,7 @@ export class MemoryCategoryRepository implements CategoryRepository {
     return category;
   }
 
-  async update(input: { id: string; name: string; bucket: Category["bucket"] }): Promise<Category> {
+  async update(input: { id: string; name: string; bucket: Category["bucket"]; idealMonthlyAmount: number }): Promise<Category> {
     const index = this.categories.findIndex((category) => category.id === input.id);
     if (index === -1) {
       throw new Error("Categoría no encontrada");
@@ -36,6 +41,7 @@ export class MemoryCategoryRepository implements CategoryRepository {
       ...this.categories[index],
       name: input.name,
       bucket: input.bucket,
+      idealMonthlyAmount: sanitize(input.idealMonthlyAmount),
       updatedAt: new Date(),
     };
 

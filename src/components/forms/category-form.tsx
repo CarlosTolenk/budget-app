@@ -39,6 +39,17 @@ export function CategoryForm() {
           ))}
         </select>
       </label>
+      <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-slate-400">
+        Monto ideal mensual
+        <input
+          name="idealMonthlyAmount"
+          type="number"
+          min={0}
+          step="0.01"
+          placeholder="500"
+          className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
+        />
+      </label>
       {state.message && (
         <p className={`text-xs ${state.status === "success" ? "text-emerald-300" : "text-rose-300"}`}>
           {state.message}

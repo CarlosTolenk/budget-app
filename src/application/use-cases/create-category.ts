@@ -5,12 +5,17 @@ import { Bucket } from "@/domain/value-objects/bucket";
 interface CreateCategoryInput {
   name: string;
   bucket: Bucket;
+  idealMonthlyAmount: number;
 }
 
 export class CreateCategoryUseCase {
   constructor(private readonly categoryRepository: CategoryRepository) {}
 
   async execute(input: CreateCategoryInput): Promise<Category> {
-    return this.categoryRepository.create({ name: input.name.trim(), bucket: input.bucket });
+    return this.categoryRepository.create({
+      name: input.name.trim(),
+      bucket: input.bucket,
+      idealMonthlyAmount: input.idealMonthlyAmount,
+    });
   }
 }

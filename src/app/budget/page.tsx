@@ -21,6 +21,10 @@ export default async function BudgetPage() {
     acc[category.bucket] = acc[category.bucket] ? [...acc[category.bucket], category] : [category];
     return acc;
   }, {});
+  const bucketSummaryMap = summary.buckets.reduce<Record<string, (typeof summary.buckets)[number]>>((acc, bucket) => {
+    acc[bucket.bucket] = bucket;
+    return acc;
+  }, {});
 
   const totalIncome = incomes.reduce((sum, income) => sum + income.amount, 0);
 
@@ -65,12 +69,36 @@ export default async function BudgetPage() {
                   <span>{copy.label}</span>
                   <span>{formatPercent(copy.targetRatio)}</span>
                 </div>
-                <p className="text-xs text-slate-400">Meta sugerida {formatCurrency(summary.income * copy.targetRatio)}</p>
+                <p className="text-xs text-slate-400">
+                  Meta sugerida {formatCurrency((bucketSummaryMap[bucket]?.target ?? summary.income * copy.targetRatio) || 0)}
+                </p>
+                <p className="text-xs text-slate-300">
+                  Plan ideal registrado {formatCurrency(bucketSummaryMap[bucket]?.planned ?? 0)}
+                </p>
+                {(() => {
+                  const target = bucketSummaryMap[bucket]?.target ?? summary.income * copy.targetRatio;
+                  const planned = bucketSummaryMap[bucket]?.planned ?? 0;
+                  const delta = target - planned;
+                  const status =
+                    planned === 0
+                      ? "Sin asignar"
+                      : delta >= 0
+                        ? "Dentro de la meta"
+                        : "Sobre la meta";
+                  return (
+                    <p className={`text-xs font-semibold ${delta >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
+                      {status} · {formatCurrency(Math.abs(delta))}
+                    </p>
+                  );
+                })()}
                 <ul className="mt-3 space-y-2 text-sm">
                   {bucketCategories.length ? (
                     bucketCategories.map((category) => (
                       <li key={category.id} className="rounded-lg bg-white/5 px-3 py-2 text-slate-100">
-                        {category.name}
+                        <div className="flex items-center justify-between gap-3">
+                          <span>{category.name}</span>
+                          <span className="text-xs text-slate-300">{formatCurrency(category.idealMonthlyAmount ?? 0)}</span>
+                        </div>
                       </li>
                     ))
                   ) : (

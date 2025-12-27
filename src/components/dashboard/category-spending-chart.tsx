@@ -7,7 +7,9 @@ interface CategorySpendingChartProps {
   data: Array<{
     id: string;
     label: string;
-    amount: number;
+    bucketLabel?: string;
+    planned: number;
+    actual: number;
   }>;
 }
 
@@ -26,8 +28,9 @@ export function CategorySpendingChart({ month, data }: CategorySpendingChartProp
     );
   }
 
-  const maxAmount = Math.max(...data.map((item) => item.amount), 1);
-  const total = data.reduce((sum, item) => sum + item.amount, 0);
+  const maxAmount = Math.max(...data.map((item) => Math.max(item.actual, item.planned)), 1);
+  const totalActual = data.reduce((sum, item) => sum + item.actual, 0);
+  const totalPlanned = data.reduce((sum, item) => sum + item.planned, 0);
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
@@ -36,23 +39,42 @@ export function CategorySpendingChart({ month, data }: CategorySpendingChartProp
           <h2 className="text-xl font-semibold">Gasto por categoría</h2>
           <p className="text-sm text-slate-300">{month}</p>
         </div>
-        <span className="text-sm text-slate-300">Total {formatCurrency(total)}</span>
+        <div className="text-right text-sm text-slate-300">
+          <p>Plan {formatCurrency(totalPlanned)}</p>
+          <p>Real {formatCurrency(totalActual)}</p>
+        </div>
       </div>
       <ul className="mt-4 space-y-4">
         {data.map((item) => {
-          const width = (item.amount / maxAmount) * 100;
-          const percent = total ? (item.amount / total) * 100 : 0;
+          const plannedWidth = (item.planned / maxAmount) * 100;
+          const actualWidth = (item.actual / maxAmount) * 100;
+          const delta = item.planned - item.actual;
           return (
             <li key={item.id}>
-              <div className="flex items-center justify-between text-sm">
-                <p className="font-medium">{item.label}</p>
+              <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <div>
+                  <p className="font-medium">{item.label}</p>
+                  {item.bucketLabel && (
+                    <span className="text-[11px] uppercase tracking-wide text-slate-400">{item.bucketLabel}</span>
+                  )}
+                </div>
                 <div className="text-right text-xs text-slate-400">
-                  <p className="text-sm font-semibold text-white">{formatCurrency(item.amount)}</p>
-                  <p>{percent.toFixed(1)}%</p>
+                  <p className="text-sm font-semibold text-white">Real {formatCurrency(item.actual)}</p>
+                  <p className="text-sm text-slate-300">Plan {formatCurrency(item.planned)}</p>
+                  <p className={delta >= 0 ? "text-emerald-300" : "text-rose-300"}>
+                    {delta >= 0 ? "Disponible" : "Exceso"} {formatCurrency(Math.abs(delta))}
+                  </p>
                 </div>
               </div>
-              <div className="mt-2 h-3 rounded-full bg-white/10">
-                <div className="h-3 rounded-full bg-rose-300/80" style={{ width: `${width}%` }} />
+              <div className="relative mt-2 h-3 rounded-full bg-white/10">
+                <div
+                  className="absolute inset-y-0 left-0 rounded-full bg-white/20"
+                  style={{ width: `${Math.min(plannedWidth, 100)}%` }}
+                />
+                <div
+                  className="relative h-full rounded-full bg-rose-300/80"
+                  style={{ width: `${Math.min(actualWidth, 100)}%` }}
+                />
               </div>
             </li>
           );

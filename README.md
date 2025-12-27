@@ -127,7 +127,7 @@ src/
 
 ## UI actual (MVP)
 - **Dashboard (`/`):** resumen anual/mes corrido, buckets 50/30/20, gráfica con ingresos/gastos de los últimos 6 meses (con montos visibles por mes), selector de mes (inputs + prev/next), últimos movimientos y reglas activas.
-- **Presupuesto (`/budget`):** formulario para registrar múltiples ingresos (nombre + monto) y ver el total del mes; los buckets 50/30/20 se calculan automáticamente. Incluye alta de categorías y reglas, además de la vista agrupada por Needs/Wants/Savings.
+- **Presupuesto (`/budget`):** formulario para registrar múltiples ingresos (nombre + monto) y ver el total del mes; los buckets 50/30/20 se calculan automáticamente. Incluye alta de categorías (con monto ideal mensual) y reglas, además de la vista agrupada por Needs/Wants/Savings.
 - **Transacciones (`/transactions`):** pestañas para (1) registrar/editar movimientos manuales, (2) definir planes programados que se ejecutan con un cron diario y (3) revisar/editar borradores automáticos antes de aprobarlos.
 
 Todo el UI usa server components y datos provenientes de los casos de uso, lo que facilita exponer la misma lógica hacia APIs o automatizaciones sin duplicar reglas.

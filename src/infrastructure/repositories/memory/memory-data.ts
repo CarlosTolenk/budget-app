@@ -21,10 +21,10 @@ export const memoryBudget: Budget = {
 };
 
 export const memoryCategories: Category[] = [
-  { id: "cat-groceries", name: "Groceries", bucket: "NEEDS", createdAt: now, updatedAt: now },
-  { id: "cat-rent", name: "Rent", bucket: "NEEDS", createdAt: now, updatedAt: now },
-  { id: "cat-fun", name: "Fun", bucket: "WANTS", createdAt: now, updatedAt: now },
-  { id: "cat-savings", name: "Emergency Fund", bucket: "SAVINGS", createdAt: now, updatedAt: now },
+  { id: "cat-groceries", name: "Groceries", bucket: "NEEDS", idealMonthlyAmount: 400, createdAt: now, updatedAt: now },
+  { id: "cat-rent", name: "Rent", bucket: "NEEDS", idealMonthlyAmount: 1600, createdAt: now, updatedAt: now },
+  { id: "cat-fun", name: "Fun", bucket: "WANTS", idealMonthlyAmount: 200, createdAt: now, updatedAt: now },
+  { id: "cat-savings", name: "Emergency Fund", bucket: "SAVINGS", idealMonthlyAmount: 500, createdAt: now, updatedAt: now },
 ];
 
 export const memoryIncomes: Income[] = [

@@ -117,7 +117,7 @@ export function serverContainer(): ServerContainer {
   );
 
   cachedContainer = {
-    getDashboardSummaryUseCase: new GetDashboardSummaryUseCase(budgetRepository, transactionRepository),
+    getDashboardSummaryUseCase: new GetDashboardSummaryUseCase(budgetRepository, transactionRepository, categoryRepository),
     listTransactionsUseCase: new ListTransactionsUseCase(transactionRepository),
     listCategoriesUseCase: new ListCategoriesUseCase(categoryRepository),
     listRulesUseCase: new ListRulesUseCase(ruleRepository),

@@ -82,6 +82,7 @@ model Category {
   id                    String                @id @default(cuid())
   name                  String                @unique
   bucket                Bucket
+  idealMonthlyAmount    Decimal               @default(0)
   transactions          Transaction[]
   rules                 Rule[]
   scheduledTransactions ScheduledTransaction[]

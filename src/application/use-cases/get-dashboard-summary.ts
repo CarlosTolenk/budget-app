@@ -1,5 +1,5 @@
 import { format, parseISO } from "date-fns";
-import { BudgetRepository, TransactionRepository } from "@/domain/repositories";
+import { BudgetRepository, CategoryRepository, TransactionRepository } from "@/domain/repositories";
 import { Bucket, bucketCopy, bucketOrder } from "@/domain/value-objects/bucket";
 import { DashboardSummary } from "../dtos/dashboard";
 
@@ -12,13 +12,15 @@ export class GetDashboardSummaryUseCase {
   constructor(
     private readonly budgetRepository: BudgetRepository,
     private readonly transactionRepository: TransactionRepository,
+    private readonly categoryRepository: CategoryRepository,
   ) {}
 
   async execute({ monthId, now = new Date() }: GetDashboardSummaryInput = {}): Promise<DashboardSummary> {
     const resolvedMonthId = monthId ?? format(now, "yyyy-MM");
-    const [budget, transactions] = await Promise.all([
+    const [budget, transactions, categories] = await Promise.all([
       this.budgetRepository.getByMonth(resolvedMonthId),
       this.transactionRepository.findByMonth(resolvedMonthId),
+      this.categoryRepository.listAll(),
     ]);
 
     const income = budget?.income ?? transactions.reduce((sum, t) => sum + (t.amount > 0 ? t.amount : 0), 0);
@@ -27,6 +29,9 @@ export class GetDashboardSummaryUseCase {
       const spent = transactions
         .filter((transaction) => transaction.bucket === bucket)
         .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
+      const planned = categories
+        .filter((category) => category.bucket === bucket)
+        .reduce((sum, category) => sum + (category.idealMonthlyAmount ?? 0), 0);
 
       const targetRatio = bucketCopy[bucket].targetRatio;
       const target = budget
@@ -36,6 +41,7 @@ export class GetDashboardSummaryUseCase {
       return {
         bucket,
         spent,
+        planned,
         target,
         targetRatio,
       };

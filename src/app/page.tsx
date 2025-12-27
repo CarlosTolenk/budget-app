@@ -9,6 +9,7 @@ import { unstable_noStore as noStore } from "next/cache";
 import { headers } from "next/headers";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { CategorySpendingChart } from "@/components/dashboard/category-spending-chart";
+import { PlanSummaryCard } from "@/components/dashboard/plan-summary-card";
 
 type DashboardPageProps = {
   searchParams?: Promise<{ month?: string }>;
@@ -46,7 +47,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         ? "Mes finalizado"
         : "Mes programado";
 
-  const categoryLabelMap = new Map(categories.map((category) => [category.id, category.name]));
   const spendingByCategory = transactions.reduce<Record<string, number>>((acc, transaction) => {
     if (transaction.amount >= 0) {
       return acc;
@@ -56,13 +56,44 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     acc[key] = current + Math.abs(transaction.amount);
     return acc;
   }, {});
-  const categorySpending = Object.entries(spendingByCategory)
-    .map(([id, amount]) => ({
-      id,
-      label: id === "uncategorized" ? "Sin categoría" : categoryLabelMap.get(id) ?? "Sin categoría",
-      amount,
-    }))
-    .sort((a, b) => b.amount - a.amount);
+  const categorySpending = [
+    ...categories.map((category) => ({
+      id: category.id,
+      label: category.name,
+      bucketLabel: bucketCopy[category.bucket].label,
+      planned: category.idealMonthlyAmount ?? 0,
+      actual: spendingByCategory[category.id] ?? 0,
+    })),
+    ...(spendingByCategory.uncategorized
+      ? [
+          {
+            id: "uncategorized",
+            label: "Sin categoría",
+            bucketLabel: undefined,
+            planned: 0,
+            actual: spendingByCategory.uncategorized,
+          },
+        ]
+      : []),
+  ]
+    .filter((entry) => entry.actual > 0 || entry.planned > 0)
+    .sort((a, b) => b.actual - a.actual);
+  const aggregatedBucketStats = summary.buckets.reduce(
+    (acc, bucket) => {
+      const planDelta = bucket.planned - bucket.spent;
+      const planVsTarget = bucket.target - bucket.planned;
+      const targetDelta = bucket.target - bucket.spent;
+      return {
+        planned: acc.planned + bucket.planned,
+        spent: acc.spent + bucket.spent,
+        target: acc.target + bucket.target,
+        planDelta: acc.planDelta + planDelta,
+        planVsTarget: acc.planVsTarget + planVsTarget,
+        targetDelta: acc.targetDelta + targetDelta,
+      };
+    },
+    { planned: 0, spent: 0, target: 0, planDelta: 0, planVsTarget: 0, targetDelta: 0 },
+  );
 
   return (
     <div className="flex flex-col gap-8">
@@ -76,10 +107,22 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       </header>
 
       <section className="grid gap-4 md:grid-cols-3">
+        <div className="md:col-span-3">
+          <PlanSummaryCard
+            planned={aggregatedBucketStats.planned}
+            spent={aggregatedBucketStats.spent}
+            target={aggregatedBucketStats.target}
+            planDelta={aggregatedBucketStats.planDelta}
+            planVsTarget={aggregatedBucketStats.planVsTarget}
+            targetDelta={aggregatedBucketStats.targetDelta}
+          />
+        </div>
         {summary.buckets.map((bucket) => {
           const copy = bucketCopy[bucket.bucket];
           const progress = bucket.target ? Math.min(bucket.spent / bucket.target, 1) : 0;
           const delta = bucket.target - bucket.spent;
+          const planDelta = bucket.planned - bucket.spent;
+          const planVsTarget = bucket.target - bucket.planned;
 
           return (
             <article key={bucket.bucket} className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
@@ -88,12 +131,22 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 <span>{formatPercent(bucket.targetRatio)}</span>
               </div>
               <p className="mt-4 text-2xl font-semibold">{formatCurrency(bucket.spent)}</p>
-              <p className="text-sm text-slate-300">Meta {formatCurrency(bucket.target)}</p>
+              <p className="text-sm text-slate-300">Real gastado</p>
+              <div className="mt-2 text-xs text-slate-400">
+                <p>Plan ideal {formatCurrency(bucket.planned)}</p>
+                <p>Meta 50/30/20 {formatCurrency(bucket.target)}</p>
+              </div>
               <div className="mt-4 h-2 rounded-full bg-white/10">
                 <div className="h-2 rounded-full bg-emerald-400 transition-all" style={{ width: `${progress * 100}%` }} />
               </div>
-              <p className={clsx("mt-2 text-sm", delta >= 0 ? "text-emerald-300" : "text-rose-300")}>
-                {delta >= 0 ? "Disponible" : "Exceso"}: {formatCurrency(Math.abs(delta))}
+              <p className={clsx("mt-2 text-sm", planDelta >= 0 ? "text-emerald-300" : "text-rose-300")}>
+                {planDelta >= 0 ? "Disponible del plan" : "Sobre el plan"}: {formatCurrency(Math.abs(planDelta))}
+              </p>
+              <p className={clsx("text-sm", planVsTarget >= 0 ? "text-emerald-300" : "text-rose-300")}>
+                {planVsTarget >= 0 ? "Meta por asignar" : "Meta excedida"}: {formatCurrency(Math.abs(planVsTarget))}
+              </p>
+              <p className={clsx("text-sm", delta >= 0 ? "text-emerald-300" : "text-rose-300")}>
+                {delta >= 0 ? "Disponible de la meta" : "Exceso total"}: {formatCurrency(Math.abs(delta))}
               </p>
             </article>
           );
@@ -151,6 +204,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 <div>
                   <p className="font-medium">{category.name}</p>
                   <p className="text-xs text-slate-400">{category.bucket}</p>
+                  <p className="text-xs text-slate-300">
+                    Plan {formatCurrency(category.idealMonthlyAmount ?? 0)} · Real{" "}
+                    {formatCurrency(spendingByCategory[category.id] ?? 0)}
+                  </p>
                 </div>
               </li>
             ))}

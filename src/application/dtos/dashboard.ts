@@ -5,6 +5,7 @@ export interface BucketProgress {
   spent: number;
   target: number;
   targetRatio: number;
+  planned: number;
 }
 
 export interface DashboardSummary {
