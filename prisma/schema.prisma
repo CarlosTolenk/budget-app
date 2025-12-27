@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Bucket {
+  NEEDS
+  WANTS
+  SAVINGS
+}
+
+enum TransactionSource {
+  EMAIL
+  MANUAL
+  SCHEDULED
+}
+
+enum ScheduledRecurrence {
+  MONTHLY
+}
+
+model Transaction {
+  id             String    @id @default(cuid())
+  date           DateTime
+  amount         Decimal
+  currency       String
+  merchant       String?
+  category       Category? @relation(fields: [categoryId], references: [id])
+  categoryId     String?
+  bucket         Bucket
+  source         TransactionSource
+  emailMessageId String?   @unique
+  rawPayload     Json?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model ScheduledTransaction {
+  id           String               @id @default(cuid())
+  name         String
+  amount       Decimal
+  currency     String
+  merchant     String?
+  bucket       Bucket
+  category     Category?            @relation(fields: [categoryId], references: [id])
+  categoryId   String?
+  recurrence   ScheduledRecurrence
+  startDate    DateTime
+  nextRunDate  DateTime
+  endDate      DateTime?
+  active       Boolean              @default(true)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  @@index([nextRunDate])
+  @@index([active])
+}
+
+model TransactionDraft {
+  id             String   @id @default(cuid())
+  date           DateTime
+  amount         String
+  currency       String
+  merchant       String?
+  bucket         Bucket
+  category       Category? @relation(fields: [categoryId], references: [id])
+  categoryId     String?
+  emailMessageId String?   @unique
+  rawPayload     Json?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([bucket])
+}
+
+model Category {
+  id                    String                @id @default(cuid())
+  name                  String                @unique
+  bucket                Bucket
+  transactions          Transaction[]
+  rules                 Rule[]
+  scheduledTransactions ScheduledTransaction[]
+  drafts                TransactionDraft[]
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+}
+
+model Budget {
+  id            String   @id @default(cuid())
+  month         String   @unique
+  income        Decimal
+  needsTarget   Decimal
+  wantsTarget   Decimal
+  savingsTarget Decimal
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Rule {
+  id         String   @id @default(cuid())
+  pattern    String
+  priority   Int      @default(0)
+  category   Category @relation(fields: [categoryId], references: [id])
+  categoryId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([categoryId])
+}
+
+model Income {
+  id        String   @id @default(cuid())
+  month     String
+  name      String
+  amount    Decimal
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([month])
+}

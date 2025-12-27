@@ -1,0 +1,150 @@
+import { GetDashboardSummaryUseCase } from "@/application/use-cases/get-dashboard-summary";
+import { ListTransactionsUseCase } from "@/application/use-cases/list-transactions";
+import { ListCategoriesUseCase } from "@/application/use-cases/list-categories";
+import { ListRulesUseCase } from "@/application/use-cases/list-rules";
+import { ProcessIncomingEmailsUseCase } from "@/application/use-cases/process-incoming-emails";
+import { UpsertBudgetUseCase } from "@/application/use-cases/upsert-budget";
+import { CreateCategoryUseCase } from "@/application/use-cases/create-category";
+import { UpdateCategoryUseCase } from "@/application/use-cases/update-category";
+import { CreateRuleUseCase } from "@/application/use-cases/create-rule";
+import { CreateTransactionUseCase } from "@/application/use-cases/create-transaction";
+import { UpdateTransactionUseCase } from "@/application/use-cases/update-transaction";
+import { DeleteTransactionUseCase } from "@/application/use-cases/delete-transaction";
+import { CreateIncomeUseCase } from "@/application/use-cases/create-income";
+import { ListIncomesUseCase } from "@/application/use-cases/list-incomes";
+import { GetYearlyOverviewUseCase } from "@/application/use-cases/get-yearly-overview";
+import { UpdateIncomeUseCase } from "@/application/use-cases/update-income";
+import { DeleteIncomeUseCase } from "@/application/use-cases/delete-income";
+import { PrismaTransactionRepository } from "@/infrastructure/repositories/prisma/prisma-transaction-repository";
+import { PrismaBudgetRepository } from "@/infrastructure/repositories/prisma/prisma-budget-repository";
+import { PrismaCategoryRepository } from "@/infrastructure/repositories/prisma/prisma-category-repository";
+import { PrismaRuleRepository } from "@/infrastructure/repositories/prisma/prisma-rule-repository";
+import { MemoryTransactionRepository } from "@/infrastructure/repositories/memory/memory-transaction-repository";
+import { MemoryBudgetRepository } from "@/infrastructure/repositories/memory/memory-budget-repository";
+import { MemoryCategoryRepository } from "@/infrastructure/repositories/memory/memory-category-repository";
+import { MemoryRuleRepository } from "@/infrastructure/repositories/memory/memory-rule-repository";
+import { MemoryIncomeRepository } from "@/infrastructure/repositories/memory/memory-income-repository";
+import { GmailProvider } from "@/infrastructure/email/gmail-provider";
+import { GenericBankAdapter } from "@/modules/email-ingestion/adapters/generic-bank-adapter";
+import { BancoPopularAdapter } from "@/modules/email-ingestion/adapters/banco-popular-adapter";
+import { AsociacionCibaoAdapter } from "@/modules/email-ingestion/adapters/asociacion-cibao-adapter";
+import { QikAdapter } from "@/modules/email-ingestion/adapters/qik-adapter";
+import { EmailIngestionService } from "@/modules/email-ingestion/services/email-ingestion-service";
+import { MockEmailProvider } from "@/modules/email-ingestion/mocks/mock-provider";
+import { env } from "@/infrastructure/config/env";
+import { PrismaIncomeRepository } from "@/infrastructure/repositories/prisma/prisma-income-repository";
+import { PrismaScheduledTransactionRepository } from "@/infrastructure/repositories/prisma/prisma-scheduled-transaction-repository";
+import { PrismaTransactionDraftRepository } from "@/infrastructure/repositories/prisma/prisma-transaction-draft-repository";
+import { MemoryScheduledTransactionRepository } from "@/infrastructure/repositories/memory/memory-scheduled-transaction-repository";
+import { MemoryTransactionDraftRepository } from "@/infrastructure/repositories/memory/memory-transaction-draft-repository";
+import { CreateScheduledTransactionUseCase } from "@/application/use-cases/create-scheduled-transaction";
+import { ListScheduledTransactionsUseCase } from "@/application/use-cases/list-scheduled-transactions";
+import { RunScheduledTransactionsUseCase } from "@/application/use-cases/run-scheduled-transactions";
+import { ListTransactionDraftsUseCase } from "@/application/use-cases/list-transaction-drafts";
+import { ApproveTransactionDraftUseCase } from "@/application/use-cases/approve-transaction-draft";
+import { DeleteTransactionDraftUseCase } from "@/application/use-cases/delete-transaction-draft";
+import { DeleteScheduledTransactionUseCase } from "@/application/use-cases/delete-scheduled-transaction";
+
+interface ServerContainer {
+  getDashboardSummaryUseCase: GetDashboardSummaryUseCase;
+  listTransactionsUseCase: ListTransactionsUseCase;
+  listCategoriesUseCase: ListCategoriesUseCase;
+  listRulesUseCase: ListRulesUseCase;
+  processIncomingEmailsUseCase: ProcessIncomingEmailsUseCase;
+  upsertBudgetUseCase: UpsertBudgetUseCase;
+  createCategoryUseCase: CreateCategoryUseCase;
+  updateCategoryUseCase: UpdateCategoryUseCase;
+  createRuleUseCase: CreateRuleUseCase;
+  createTransactionUseCase: CreateTransactionUseCase;
+  createIncomeUseCase: CreateIncomeUseCase;
+  updateIncomeUseCase: UpdateIncomeUseCase;
+  deleteIncomeUseCase: DeleteIncomeUseCase;
+  listIncomesUseCase: ListIncomesUseCase;
+  getYearlyOverviewUseCase: GetYearlyOverviewUseCase;
+  updateTransactionUseCase: UpdateTransactionUseCase;
+  deleteTransactionUseCase: DeleteTransactionUseCase;
+  createScheduledTransactionUseCase: CreateScheduledTransactionUseCase;
+  listScheduledTransactionsUseCase: ListScheduledTransactionsUseCase;
+  runScheduledTransactionsUseCase: RunScheduledTransactionsUseCase;
+  listTransactionDraftsUseCase: ListTransactionDraftsUseCase;
+  approveTransactionDraftUseCase: ApproveTransactionDraftUseCase;
+  deleteTransactionDraftUseCase: DeleteTransactionDraftUseCase;
+  deleteScheduledTransactionUseCase: DeleteScheduledTransactionUseCase;
+}
+
+let cachedContainer: ServerContainer | null = null;
+
+export function serverContainer(): ServerContainer {
+  if (cachedContainer) {
+    return cachedContainer;
+  }
+
+  const hasDatabase = Boolean(env.DATABASE_URL);
+
+  const transactionRepository = hasDatabase ? new PrismaTransactionRepository() : new MemoryTransactionRepository();
+  const budgetRepository = hasDatabase ? new PrismaBudgetRepository() : new MemoryBudgetRepository();
+  const categoryRepository = hasDatabase ? new PrismaCategoryRepository() : new MemoryCategoryRepository();
+  const ruleRepository = hasDatabase ? new PrismaRuleRepository() : new MemoryRuleRepository();
+  const incomeRepository = hasDatabase ? new PrismaIncomeRepository() : new MemoryIncomeRepository();
+  const scheduledTransactionRepository = hasDatabase
+    ? new PrismaScheduledTransactionRepository()
+    : new MemoryScheduledTransactionRepository();
+  const draftRepository = hasDatabase ? new PrismaTransactionDraftRepository() : new MemoryTransactionDraftRepository();
+
+  const hasGmailCredentials = Boolean(env.GMAIL_CLIENT_ID && env.GMAIL_CLIENT_SECRET && env.GMAIL_REFRESH_TOKEN);
+
+  const emailProvider = hasGmailCredentials
+    ? new GmailProvider({
+        clientId: env.GMAIL_CLIENT_ID!,
+        clientSecret: env.GMAIL_CLIENT_SECRET!,
+        refreshToken: env.GMAIL_REFRESH_TOKEN!,
+        label: env.GMAIL_LABEL,
+      })
+    : new MockEmailProvider();
+
+  if (!hasGmailCredentials) {
+    console.warn("[email] Gmail credentials missing, falling back to MockEmailProvider.");
+  }
+
+  const emailIngestionService = new EmailIngestionService(
+    emailProvider,
+    [new BancoPopularAdapter(), new AsociacionCibaoAdapter(), new QikAdapter(), new GenericBankAdapter()],
+    transactionRepository,
+    draftRepository,
+    categoryRepository,
+    ruleRepository,
+    env.GMAIL_LABEL,
+  );
+
+  cachedContainer = {
+    getDashboardSummaryUseCase: new GetDashboardSummaryUseCase(budgetRepository, transactionRepository),
+    listTransactionsUseCase: new ListTransactionsUseCase(transactionRepository),
+    listCategoriesUseCase: new ListCategoriesUseCase(categoryRepository),
+    listRulesUseCase: new ListRulesUseCase(ruleRepository),
+    processIncomingEmailsUseCase: new ProcessIncomingEmailsUseCase(emailIngestionService),
+    upsertBudgetUseCase: new UpsertBudgetUseCase(budgetRepository),
+    createCategoryUseCase: new CreateCategoryUseCase(categoryRepository),
+    updateCategoryUseCase: new UpdateCategoryUseCase(categoryRepository),
+    createRuleUseCase: new CreateRuleUseCase(ruleRepository),
+    createTransactionUseCase: new CreateTransactionUseCase(transactionRepository),
+    updateTransactionUseCase: new UpdateTransactionUseCase(transactionRepository),
+    deleteTransactionUseCase: new DeleteTransactionUseCase(transactionRepository),
+    createIncomeUseCase: new CreateIncomeUseCase(incomeRepository, budgetRepository),
+    updateIncomeUseCase: new UpdateIncomeUseCase(incomeRepository, budgetRepository),
+    deleteIncomeUseCase: new DeleteIncomeUseCase(incomeRepository, budgetRepository),
+    listIncomesUseCase: new ListIncomesUseCase(incomeRepository),
+    getYearlyOverviewUseCase: new GetYearlyOverviewUseCase(incomeRepository, transactionRepository),
+    createScheduledTransactionUseCase: new CreateScheduledTransactionUseCase(scheduledTransactionRepository),
+    listScheduledTransactionsUseCase: new ListScheduledTransactionsUseCase(scheduledTransactionRepository),
+    runScheduledTransactionsUseCase: new RunScheduledTransactionsUseCase(
+      scheduledTransactionRepository,
+      transactionRepository,
+    ),
+    deleteScheduledTransactionUseCase: new DeleteScheduledTransactionUseCase(scheduledTransactionRepository),
+    listTransactionDraftsUseCase: new ListTransactionDraftsUseCase(draftRepository),
+    approveTransactionDraftUseCase: new ApproveTransactionDraftUseCase(draftRepository, transactionRepository, categoryRepository),
+    deleteTransactionDraftUseCase: new DeleteTransactionDraftUseCase(draftRepository),
+  };
+
+  return cachedContainer;
+}

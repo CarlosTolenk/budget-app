@@ -1,0 +1,16 @@
+import { Category } from "@/domain/categories/category";
+import { CategoryRepository } from "@/domain/repositories";
+import { Bucket } from "@/domain/value-objects/bucket";
+
+interface CreateCategoryInput {
+  name: string;
+  bucket: Bucket;
+}
+
+export class CreateCategoryUseCase {
+  constructor(private readonly categoryRepository: CategoryRepository) {}
+
+  async execute(input: CreateCategoryInput): Promise<Category> {
+    return this.categoryRepository.create({ name: input.name.trim(), bucket: input.bucket });
+  }
+}
