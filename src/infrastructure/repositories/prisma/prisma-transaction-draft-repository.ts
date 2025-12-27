@@ -43,7 +43,7 @@ export class PrismaTransactionDraftRepository implements TransactionDraftReposit
         bucket: input.bucket,
         categoryId: input.categoryId,
         emailMessageId: input.emailMessageId,
-        rawPayload: input.rawPayload ?? undefined,
+        rawPayload: input.rawPayload ? (input.rawPayload as Prisma.InputJsonValue) : Prisma.JsonNull,
       },
     });
     const mapped = this.map(record);
@@ -105,13 +105,17 @@ export class PrismaTransactionDraftRepository implements TransactionDraftReposit
     };
   }
 
-  private parseAmount(value: string | Prisma.Decimal | null): number | null {
+  private parseAmount(value: string | Prisma.Decimal | number | null): number | null {
     if (value === null || value === undefined) {
       return null;
     }
 
     if (value instanceof Prisma.Decimal) {
       return value.toNumber();
+    }
+
+    if (typeof value === "number") {
+      return value;
     }
 
     const sanitized = value.replace(/[^\d.-]/g, "");

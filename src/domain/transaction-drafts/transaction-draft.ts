@@ -10,6 +10,7 @@ export interface TransactionDraft {
   categoryId?: string | null;
   emailMessageId?: string | null;
   rawPayload?: Record<string, unknown> | null;
+  source?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,4 +24,5 @@ export interface CreateDraftInput {
   categoryId?: string;
   emailMessageId?: string;
   rawPayload?: Record<string, unknown> | null;
+  source?: string | null;
 }

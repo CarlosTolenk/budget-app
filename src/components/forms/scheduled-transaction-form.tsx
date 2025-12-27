@@ -5,7 +5,7 @@ import { Category } from "@/domain/categories/category";
 import { createScheduledTransactionAction } from "@/app/actions/scheduled-transaction-actions";
 import { initialActionState } from "@/app/actions/action-state";
 
-const buckets = [
+const buckets: Array<{ value: "NEEDS" | "WANTS" | "SAVINGS"; label: string }> = [
   { value: "NEEDS", label: "Needs" },
   { value: "WANTS", label: "Wants" },
   { value: "SAVINGS", label: "Savings" },

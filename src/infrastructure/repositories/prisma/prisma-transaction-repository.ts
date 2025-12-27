@@ -1,5 +1,5 @@
 import { endOfMonth, parseISO, startOfMonth } from "date-fns";
-import { Transaction as PrismaTransaction } from "@prisma/client";
+import { Prisma, Transaction as PrismaTransaction } from "@prisma/client";
 import { TransactionRepository } from "@/domain/repositories";
 import { CreateTransactionInput, Transaction } from "@/domain/transactions/transaction";
 import { prisma } from "@/infrastructure/db/prisma-client";
@@ -39,17 +39,37 @@ export class PrismaTransactionRepository implements TransactionRepository {
       return 0;
     }
 
-    const result = await prisma.transaction.createMany({ data: transactions });
+    const payloads = transactions.map((transaction) => ({
+      ...transaction,
+      rawPayload: transaction.rawPayload ? (transaction.rawPayload as Prisma.InputJsonValue) : Prisma.JsonNull,
+    }));
+    const result = await prisma.transaction.createMany({ data: payloads });
     return result.count;
   }
 
   async create(transaction: CreateTransactionInput): Promise<Transaction> {
-    const record = await prisma.transaction.create({ data: transaction });
+    const record = await prisma.transaction.create({
+      data: {
+        ...transaction,
+        rawPayload: transaction.rawPayload ? (transaction.rawPayload as Prisma.InputJsonValue) : Prisma.JsonNull,
+      },
+    });
     return this.mapTransaction(record);
   }
 
   async update(id: string, data: Partial<CreateTransactionInput>): Promise<Transaction> {
-    const record = await prisma.transaction.update({ where: { id }, data });
+    const record = await prisma.transaction.update({
+      where: { id },
+      data: {
+        ...data,
+        rawPayload:
+          data.rawPayload !== undefined
+            ? data.rawPayload
+              ? (data.rawPayload as Prisma.InputJsonValue)
+              : Prisma.JsonNull
+            : undefined,
+      },
+    });
     return this.mapTransaction(record);
   }
 

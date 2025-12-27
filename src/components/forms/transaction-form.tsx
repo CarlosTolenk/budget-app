@@ -5,7 +5,7 @@ import { createTransactionAction } from "@/app/actions/transaction-actions";
 import { initialActionState } from "@/app/actions/action-state";
 import { Category } from "@/domain/categories/category";
 
-const buckets = [
+const buckets: Array<{ value: "NEEDS" | "WANTS" | "SAVINGS"; label: string }> = [
   { value: "NEEDS", label: "Needs" },
   { value: "WANTS", label: "Wants" },
   { value: "SAVINGS", label: "Savings" },
