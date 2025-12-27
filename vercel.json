@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/import-emails",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/process-scheduled",
+      "schedule": "0 5 * * *"
+    }
+  ]
+}
