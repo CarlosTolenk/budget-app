@@ -1,7 +1,6 @@
 import { EmailMessage } from "../types/email-message";
 
 export interface EmailProviderConfig {
-  label?: string;
   maxResults?: number;
 }
 

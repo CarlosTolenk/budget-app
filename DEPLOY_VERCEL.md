@@ -10,18 +10,18 @@ Esta guía resume los pasos necesarios para publicar el proyecto en Vercel y dej
 ## 2. Preparar variables y refresh token
 1. Copia `.env.example` a `.env` y completa:
    - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`
-   - `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_LABEL`
+   - `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`
 2. Ejecuta `npm install` (una sola vez).
 3. Corre `npm run auth:gmail` (asegúrate de que no esté corriendo `npm run dev`). El script abre un servidor en `http://localhost:3000`, imprime la URL de consentimiento y, tras autorizar en Gmail, guarda el refresh token en `GOOGLE_REFRESH_TOKEN` **y** `GMAIL_REFRESH_TOKEN`.
    - El refresh token sólo se obtiene la primera vez o después de revocar el acceso desde [Google Account → Security → Third-party access](https://myaccount.google.com/permissions).
    - No hace falta renovar el refresh token periódicamente; la librería `googleapis` usa ese valor para generar access tokens nuevos de forma transparente.
-4. Verifica que `GMAIL_LABEL` coincida con la etiqueta real de Gmail (ej: `GastosBanco`). El cron `/api/cron/import-emails` filtrará por ese nombre.
+4. La ingesta revisa la bandeja de entrada completa y sólo procesa los correos que coinciden con los adaptadores disponibles; el resto se omite automáticamente.
 
 ## 3. Crear el proyecto en Vercel
 1. En Vercel, crea un **New Project** apuntando al repositorio.
 2. Configura las variables de entorno en “Settings → Environment Variables”:
    - `DATABASE_URL` y `DIRECT_URL` (usa Postgres si pasas a producción, o deja SQLite para pruebas internas).
-   - `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `GMAIL_LABEL`.
+   - `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`.
    - `ADMIN_USERNAME`, `ADMIN_PASSWORD` para habilitar el login básico (`/login`). Estos mismos valores se usan localmente.
    - Si necesitas reconstruir el refresh token en el futuro, repite el paso 2 y actualiza estos valores aquí.
 3. El deploy inicial correrá `next build` y `prisma generate` automáticamente.

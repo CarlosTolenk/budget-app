@@ -98,7 +98,6 @@ export function serverContainer(): ServerContainer {
         clientId: env.GMAIL_CLIENT_ID!,
         clientSecret: env.GMAIL_CLIENT_SECRET!,
         refreshToken: env.GMAIL_REFRESH_TOKEN!,
-        label: env.GMAIL_LABEL,
       })
     : new MockEmailProvider();
 
@@ -113,7 +112,6 @@ export function serverContainer(): ServerContainer {
     draftRepository,
     categoryRepository,
     ruleRepository,
-    env.GMAIL_LABEL,
   );
 
   cachedContainer = {

@@ -24,12 +24,11 @@ export class EmailIngestionService {
     private readonly draftRepository: TransactionDraftRepository,
     private readonly categoryRepository: CategoryRepository,
     private readonly ruleRepository: RuleRepository,
-    private readonly label?: string,
   ) {}
 
   async run(): Promise<EmailIngestionResult> {
     const [messages, categories, rules] = await Promise.all([
-      this.provider.listMessages({ label: this.label }),
+      this.provider.listMessages(),
       this.categoryRepository.listAll(),
       this.ruleRepository.listAll(),
     ]);

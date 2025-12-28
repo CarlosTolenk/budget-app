@@ -6,7 +6,6 @@ interface GmailProviderOptions {
   clientId: string;
   clientSecret: string;
   refreshToken: string;
-  label?: string;
 }
 
 export class GmailProvider implements EmailProvider {
@@ -26,15 +25,11 @@ export class GmailProvider implements EmailProvider {
       return [];
     }
 
-    const label = config?.label ?? this.options.label;
     const maxResults = config?.maxResults ?? 30;
     const labelMap = await this.getLabelMap();
-    const labelId = label ? this.findLabelId(labelMap, label) : undefined;
 
     const response = await this.gmail.users.messages.list({
       userId: "me",
-      labelIds: labelId ? [labelId] : undefined,
-      q: label && !labelId ? `label:${label}` : undefined,
       maxResults,
       includeSpamTrash: false,
     });
@@ -169,16 +164,6 @@ export class GmailProvider implements EmailProvider {
       .map((entry) => entry.trim())
       .filter(Boolean)
       .map((entry) => this.parseAddress(entry));
-  }
-
-  private findLabelId(labelMap: Map<string, string>, name: string): string | undefined {
-    const target = name.toLowerCase();
-    for (const [id, labelName] of labelMap.entries()) {
-      if (labelName.toLowerCase() === target) {
-        return id;
-      }
-    }
-    return undefined;
   }
 
   private extractBody(payload?: gmail_v1.Schema$MessagePart): string {

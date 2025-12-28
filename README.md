@@ -22,7 +22,6 @@ Aplicación Next.js 14 orientada a un MVP escalable para controlar un presupuest
      GMAIL_CLIENT_ID=
      GMAIL_CLIENT_SECRET=
      GMAIL_REFRESH_TOKEN=
-     GMAIL_LABEL=bank-notifications
      ```
    - Para moverte a PostgreSQL (Vercel Postgres u otro servicio) actualiza `prisma/schema.prisma` para que `provider = "postgresql"` y sustituye `DATABASE_URL`/`DIRECT_URL` por la cadena de conexión correspondiente.
    - Mientras no existan credenciales reales de Gmail, se usa un `MockEmailProvider`; los datos persisten en el archivo SQLite local.
@@ -100,8 +99,8 @@ src/
 2. Guardar `CLIENT_ID`, `CLIENT_SECRET` y `REFRESH_TOKEN` en Vercel/`.env`.
 3. Completar `src/infrastructure/email/gmail-provider.ts` para:
    - Generar tokens usando OAuth 2.0.
-   - Invocar `users.messages.list` filtrando por `labelIds` y fecha.
-   - Traer el cuerpo con `users.messages.get`.
+   - Invocar `users.messages.list` para traer los correos recientes.
+   - Traer el cuerpo completo con `users.messages.get`.
 4. Implementar adapters específicos por banco (`modules/email-ingestion/adapters`). Se registran en `serverContainer`.
 5. Opcional: persistir el `historyId` de Gmail para hacer fetch incremental en vez de full sync.
 
@@ -111,7 +110,7 @@ src/
 3. Abre la URL mostrada en consola, inicia sesión en la cuenta que leerá los correos bancarios y acepta los permisos. Google redirigirá a `/oauth2callback`, el script intercambiará el `code` con `OAuth2Client.getToken`, mostrará los tokens y guardará automáticamente `GOOGLE_REFRESH_TOKEN` **y** `GMAIL_REFRESH_TOKEN` en `.env`.
 4. Si no aparece `refresh_token`, revoca el acceso desde [Google Account → Security → Third-party access](https://myaccount.google.com/permissions) y vuelve a ejecutar `npm run auth:gmail`. También sucede si no se usan los parámetros mencionados anteriormente.
 5. Para comprobar que todo funciona, ejecuta `npm run gmail:inbox`, el cual usa `gmail.users.messages.list` para traer los últimos 5 correos de la bandeja de entrada y muestra `Subject/From/Date` (usa el `refresh_token` guardado).
-6. Configura `GMAIL_LABEL` con el nombre exacto de la etiqueta en Gmail que contiene tus notificaciones bancarias (por ejemplo, `gastosbanco`). La ruta `/api/cron/import-emails` filtra los mensajes usando esa etiqueta.
+6. Los correos se leen directamente desde la bandeja de entrada. Asegúrate de tener reglas/adaptadores que identifiquen los formatos válidos; el resto se omite automáticamente durante la ingesta.
 
 ### Solución de problemas comunes
 - `redirect_uri_mismatch`: ve a Google Cloud Console → APIs & Services → Credentials → tu OAuth Client ID y asegúrate de que `http://localhost:3000/oauth2callback` esté en la lista de Redirect URIs.
