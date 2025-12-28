@@ -160,8 +160,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       <CategorySpendingChart data={categorySpending} month={summary.month} />
 
       <section className="grid gap-4 md:grid-cols-2">
-        <article className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
-          <div className="mb-4 flex items-center justify-between">
+        <article className="flex h-[420px] flex-col rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
+          <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold">Transacciones</h2>
               <p className="text-sm text-slate-300">Últimos movimientos del mes</p>
@@ -170,7 +170,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               {transactions.length}
             </span>
           </div>
-          <div className="space-y-4">
+          <div className="mt-4 flex-1 space-y-4 overflow-y-auto pr-2">
             {transactions.map((transaction) => (
               <div key={transaction.id} className="flex items-center justify-between border-b border-white/5 pb-3 last:border-b-0">
                 <div>
@@ -192,10 +192,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </div>
         </article>
 
-        <article className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
+        <article className="flex h-[420px] flex-col rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
           <h2 className="text-xl font-semibold">Categorías</h2>
           <p className="text-sm text-slate-300">Resumen de buckets</p>
-          <ul className="mt-4 space-y-3">
+          <ul className="mt-4 flex-1 space-y-3 overflow-y-auto pr-2">
             {categories.map((category) => (
               <li
                 key={category.id}

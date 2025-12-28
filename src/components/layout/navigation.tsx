@@ -8,6 +8,7 @@ const links = [
   { href: "/", label: "Dashboard" },
   { href: "/budget", label: "Presupuesto" },
   { href: "/transactions", label: "Transacciones" },
+  { href: "/stats", label: "Estadísticas" },
 ];
 
 export function Navigation() {

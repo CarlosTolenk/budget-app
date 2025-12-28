@@ -44,7 +44,7 @@ export function CategorySpendingChart({ month, data }: CategorySpendingChartProp
           <p>Real {formatCurrency(totalActual)}</p>
         </div>
       </div>
-      <ul className="mt-4 space-y-4">
+      <ul className="mt-4 max-h-[360px] space-y-4 overflow-y-auto pr-2">
         {data.map((item) => {
           const plannedWidth = (item.planned / maxAmount) * 100;
           const actualWidth = (item.actual / maxAmount) * 100;

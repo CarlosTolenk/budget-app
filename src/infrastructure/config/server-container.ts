@@ -13,6 +13,7 @@ import { DeleteTransactionUseCase } from "@/application/use-cases/delete-transac
 import { CreateIncomeUseCase } from "@/application/use-cases/create-income";
 import { ListIncomesUseCase } from "@/application/use-cases/list-incomes";
 import { GetYearlyOverviewUseCase } from "@/application/use-cases/get-yearly-overview";
+import { GetFinancialStatsUseCase } from "@/application/use-cases/get-financial-stats";
 import { UpdateIncomeUseCase } from "@/application/use-cases/update-income";
 import { DeleteIncomeUseCase } from "@/application/use-cases/delete-income";
 import { PrismaTransactionRepository } from "@/infrastructure/repositories/prisma/prisma-transaction-repository";
@@ -61,6 +62,7 @@ interface ServerContainer {
   deleteIncomeUseCase: DeleteIncomeUseCase;
   listIncomesUseCase: ListIncomesUseCase;
   getYearlyOverviewUseCase: GetYearlyOverviewUseCase;
+  getFinancialStatsUseCase: GetFinancialStatsUseCase;
   updateTransactionUseCase: UpdateTransactionUseCase;
   deleteTransactionUseCase: DeleteTransactionUseCase;
   createScheduledTransactionUseCase: CreateScheduledTransactionUseCase;
@@ -114,6 +116,8 @@ export function serverContainer(): ServerContainer {
     ruleRepository,
   );
 
+  const financialStatsUseCase = new GetFinancialStatsUseCase(transactionRepository, incomeRepository, categoryRepository);
+
   cachedContainer = {
     getDashboardSummaryUseCase: new GetDashboardSummaryUseCase(budgetRepository, transactionRepository, categoryRepository),
     listTransactionsUseCase: new ListTransactionsUseCase(transactionRepository),
@@ -142,6 +146,7 @@ export function serverContainer(): ServerContainer {
     listTransactionDraftsUseCase: new ListTransactionDraftsUseCase(draftRepository),
     approveTransactionDraftUseCase: new ApproveTransactionDraftUseCase(draftRepository, transactionRepository, categoryRepository),
     deleteTransactionDraftUseCase: new DeleteTransactionDraftUseCase(draftRepository),
+    getFinancialStatsUseCase: financialStatsUseCase,
   };
 
   return cachedContainer;
