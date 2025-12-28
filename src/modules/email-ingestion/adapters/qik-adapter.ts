@@ -60,7 +60,14 @@ export class QikAdapter implements BankAdapter {
   }
 
   private sanitize(body: string): string {
-    return body.replace(/\r/g, " ").replace(/\*/g, " ").replace(/\s+/g, " ").trim();
+    return body
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/\r|\n|\*/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   private parseAmount(token: string): number | null {
@@ -91,16 +98,25 @@ export class QikAdapter implements BankAdapter {
   }
 
   private extractMerchant(text: string): string | null {
+    const merchantPattern = "([A-Za-z0-9 .,'/&-]+?)";
     const inlineMatch = text.match(
-      /transacci[óo]n de\s*(?:RD\$|US\$|EUR\$|\$)?\s*[\d.,]+\s+en\s+([A-Za-z0-9 .,'-]+?)(?=\s+con\b)/i,
+      new RegExp(
+        `transacci[óo]n de\\s*(?:RD\\$|US\\$|EUR\\$|\\$)?\\s*[\\d.,]+\\s+en\\s+${merchantPattern}(?=\\s+con\\b)`,
+        "i",
+      ),
     );
     if (inlineMatch) {
       return inlineMatch[1].trim();
     }
 
-    const localityMatch = text.match(/Localidad\s+([A-Za-z0-9 .,'-]+?)(?=\s+(?:Fecha|Monto|Balance)\b)/i);
-    if (localityMatch) {
-      return localityMatch[1].trim();
+    const labelMatch = text.match(
+      new RegExp(
+        `(?:Localidad|Comercio|Establecimiento)\\s*(?::\\s*)?\\s+${merchantPattern}(?=\\s+(?:Fecha|Monto|Balance|Disponible|Tarjeta|Si\\b))`,
+        "i",
+      ),
+    );
+    if (labelMatch) {
+      return labelMatch[1].trim();
     }
 
     return null;
@@ -108,19 +124,63 @@ export class QikAdapter implements BankAdapter {
 
   private extractDate(text: string): Date | null {
     const match = text.match(
-      /Fecha y hora\s+(\d{2})[-/](\d{2})[-/](\d{4})\s+(\d{1,2}):(\d{2})\s*(AM|PM)(?:\s*\([A-Z]+\))?/i,
+      /Fecha(?: y hora)?\s+(\d{1,2})[-/](\d{1,2})[-/](\d{4})(?:\s+(\d{1,2}):(\d{2})\s*(AM|PM)?(?:\s*\([A-Z]+\))?)?/i,
     );
     if (!match) {
       return null;
     }
 
-    const [, month, day, year, hourPart, minutePart, meridian] = match;
-    let hours = Number(hourPart) % 12;
-    if (meridian.toUpperCase() === "PM") {
-      hours += 12;
+    const [, first, second, year, hourPart, minutePart, meridian] = match;
+    const { month, day } = this.resolveDateOrder(Number(first), Number(second));
+    if (month === null || day === null) {
+      return null;
     }
-    const minutes = Number(minutePart);
-    const parsed = new Date(Number(year), Number(month) - 1, Number(day), hours, minutes, 0);
+
+    let hours = hourPart ? Number(hourPart) : 0;
+    let minutes = minutePart ? Number(minutePart) : 0;
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+      hours = 0;
+      minutes = 0;
+    }
+
+    if (meridian) {
+      const normalizedMeridian = meridian.toUpperCase();
+      hours = hours % 12;
+      if (normalizedMeridian === "PM") {
+        hours += 12;
+      }
+    }
+
+    const parsed = new Date(Number(year), month - 1, day, hours, minutes, 0);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  private resolveDateOrder(first: number, second: number): { month: number | null; day: number | null } {
+    const isFirstValidMonth = first >= 1 && first <= 12;
+    const isSecondValidMonth = second >= 1 && second <= 12;
+    const isFirstValidDay = first >= 1 && first <= 31;
+    const isSecondValidDay = second >= 1 && second <= 31;
+
+    if (first > 12 && second > 12) {
+      return { month: null, day: null };
+    }
+
+    if (first > 12 && isSecondValidMonth && isFirstValidDay) {
+      return { month: second, day: first };
+    }
+
+    if (second > 12 && isFirstValidMonth && isSecondValidDay) {
+      return { month: first, day: second };
+    }
+
+    if (isFirstValidMonth && isSecondValidDay) {
+      return { month: first, day: second };
+    }
+
+    if (isSecondValidMonth && isFirstValidDay) {
+      return { month: second, day: first };
+    }
+
+    return { month: null, day: null };
   }
 }

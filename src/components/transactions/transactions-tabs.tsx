@@ -137,7 +137,11 @@ function ScheduledPanel({ scheduled, categories }: { scheduled: ScheduledTransac
 
 function DraftsPanel({ drafts, categories }: { drafts: TransactionDraft[]; categories: Category[] }) {
   const router = useRouter();
-  const [importState, setImportState] = useState<{ status: "idle" | "success" | "error"; message?: string }>({
+  const [importState, setImportState] = useState<{
+    status: "idle" | "success" | "error";
+    message?: string;
+    details?: string[];
+  }>({
     status: "idle",
   });
   const [isPending, startTransition] = useTransition();
@@ -173,16 +177,25 @@ function DraftsPanel({ drafts, categories }: { drafts: TransactionDraft[]; categ
           {isPending ? "Sincronizando..." : "Obtener correos"}
         </button>
       </div>
-      {importState.message && (
-        <p
-          className={clsx(
-            "text-xs",
-            importState.status === "success" ? "text-emerald-300" : "text-rose-300",
-          )}
-        >
-          {importState.message}
-        </p>
-      )}
+      {importState.message ? (
+        <div className="space-y-1 rounded-xl border border-white/5 bg-slate-900/20 p-3">
+          <p
+            className={clsx(
+              "text-xs",
+              importState.status === "success" ? "text-emerald-300" : "text-rose-300",
+            )}
+          >
+            {importState.message}
+          </p>
+          {importState.details?.length ? (
+            <ul className="list-disc space-y-1 pl-4 text-[11px] text-slate-400">
+              {importState.details.map((detail, index) => (
+                <li key={`${detail}-${index}`}>{detail}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
       {drafts.map((draft) => (
         <DraftCard key={draft.id} draft={draft} categories={categories} />
       ))}

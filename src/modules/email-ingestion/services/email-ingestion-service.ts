@@ -7,8 +7,14 @@ import { EmailMessage } from "../types/email-message";
 export interface EmailIngestionResult {
   imported: number;
   skipped: number;
-  errors: { messageId: string; reason: string }[];
+  errors: { messageId: string; reason: EmailIngestionSkipReason; subject?: string }[];
 }
+
+export type EmailIngestionSkipReason =
+  | "already-imported"
+  | "already-draft"
+  | "adapter-missing"
+  | "parse-failed";
 
 export class EmailIngestionService {
   constructor(
@@ -28,33 +34,34 @@ export class EmailIngestionService {
       this.ruleRepository.listAll(),
     ]);
 
-    console.log(`Found ${messages.length} messages`);
-    console.log(messages);
-    console.log(categories);
-
     const errors: EmailIngestionResult["errors"] = [];
     const toPersist: CreateDraftInput[] = [];
 
     for (const message of messages) {
+      const recordSkip = (reason: EmailIngestionSkipReason) =>
+        errors.push({ messageId: message.id, reason, subject: message.subject });
+
       const exists = await this.transactionRepository.findByEmailMessageId(message.id);
       if (exists) {
+        recordSkip("already-imported");
         continue;
       }
 
       const existingDraft = message.id ? await this.draftRepository.findByEmailMessageId(message.id) : null;
       if (existingDraft) {
+        recordSkip("already-draft");
         continue;
       }
 
       const adapter = this.adapters.find((candidate) => candidate.matches(message));
       if (!adapter) {
-        errors.push({ messageId: message.id, reason: "No adapter" });
+        recordSkip("adapter-missing");
         continue;
       }
 
       const parsed = adapter.parse(message);
       if (!parsed) {
-        errors.push({ messageId: message.id, reason: "Unable to parse" });
+        recordSkip("parse-failed");
         continue;
       }
 
