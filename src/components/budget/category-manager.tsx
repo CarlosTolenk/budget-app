@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Category } from "@/domain/categories/category";
 import { initialActionState } from "@/app/actions/action-state";
 import { updateCategoryAction } from "@/app/actions/category-actions";
@@ -19,14 +20,16 @@ interface CategoryManagerProps {
 export function CategoryManager({ categories }: CategoryManagerProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [state, formAction] = useActionState(updateCategoryAction, initialActionState);
+  const router = useRouter();
   const safeAmount = useCallback((value?: number) => (typeof value === "number" && Number.isFinite(value) ? value : 0), []);
 
   useEffect(() => {
     if (state.status === "success") {
+      router.refresh();
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setEditingId(null);
     }
-  }, [state]);
+  }, [state, router]);
 
   const sorted = useMemo(
     () => [...categories].sort((a, b) => a.name.localeCompare(b.name)),
