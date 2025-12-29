@@ -2,7 +2,7 @@ import { format } from "date-fns";
 import clsx from "clsx";
 import { bucketCopy } from "@/domain/value-objects/bucket";
 import { serverContainer } from "@/infrastructure/config/server-container";
-import { formatCurrency, formatPercent } from "@/lib/format";
+import { formatCurrency, formatMonthLabel, formatPercent } from "@/lib/format";
 import { YearlyChart } from "@/components/dashboard/yearly-chart";
 import { MonthSwitcher } from "@/components/dashboard/month-switcher";
 import { unstable_noStore as noStore } from "next/cache";
@@ -33,11 +33,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const monthRegex = /^\d{4}-\d{2}$/;
   const selectedMonth = requestedMonth && monthRegex.test(requestedMonth) ? requestedMonth : format(new Date(), "yyyy-MM");
   const container = serverContainer();
-  const [summary, transactions, categories, rules, yearlyOverview] = await Promise.all([
+  const [summary, transactions, categories, yearlyOverview] = await Promise.all([
     container.getDashboardSummaryUseCase.execute({ userId, monthId: selectedMonth, now: new Date() }),
     container.listTransactionsUseCase.execute({ userId, monthId: selectedMonth }),
     container.listCategoriesUseCase.execute(userId),
-    container.listRulesUseCase.execute(userId),
     container.getYearlyOverviewUseCase.execute({ userId, monthsBack: 6, baseMonth: selectedMonth }),
   ]);
 
@@ -99,7 +98,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   return (
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-2">
-        <p className="text-sm uppercase tracking-wide text-slate-400">Personal Budget · {summary.month}</p>
+        <p className="text-sm uppercase tracking-wide text-slate-400">Personal Budget · {formatMonthLabel(summary.month)}</p>
         <h1 className="text-3xl font-semibold">Regla 50/30/20 en acción</h1>
         <p className="text-base text-slate-300">
           Ingresos declarados {formatCurrency(summary.income)} · {remainingDescription}
@@ -216,26 +215,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </article>
       </section>
 
-      <section className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-semibold">Rules Manager</h2>
-            <p className="text-sm text-slate-300">De merchant → categoría usando regex priorizadas</p>
-          </div>
-        </div>
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-          {rules.map((rule) => {
-            const category = categories.find((cat) => cat.id === rule.categoryId);
-            return (
-              <div key={rule.id} className="rounded-xl border border-white/5 p-4 text-sm text-slate-100">
-                <p className="font-mono text-sm text-emerald-200">/{rule.pattern}/</p>
-                <p className="mt-2 text-xs uppercase tracking-wide text-slate-400">Priority #{rule.priority}</p>
-                <p className="text-sm font-semibold">{category?.name}</p>
-              </div>
-            );
-          })}
-        </div>
-      </section>
     </div>
   );
 }

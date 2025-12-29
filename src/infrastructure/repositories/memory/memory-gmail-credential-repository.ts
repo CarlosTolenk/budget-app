@@ -34,4 +34,8 @@ export class MemoryGmailCredentialRepository implements GmailCredentialRepositor
     this.credentials = [...this.credentials, created];
     return created;
   }
+
+  async deleteByUserId(userId: string): Promise<void> {
+    this.credentials = this.credentials.filter((credential) => credential.userId !== userId);
+  }
 }

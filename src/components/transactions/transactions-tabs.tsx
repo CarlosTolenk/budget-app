@@ -15,6 +15,7 @@ import { deleteScheduledTransactionAction } from "@/app/actions/scheduled-transa
 import { approveDraftAction, deleteDraftAction } from "@/app/actions/draft-transaction-actions";
 import { initialActionState } from "@/app/actions/action-state";
 import { importEmailsAction } from "@/app/actions/import-email-actions";
+import { disconnectGmailAction } from "@/app/actions/gmail-credential-actions";
 import { useRouter } from "next/navigation";
 
 const bucketOptions = [
@@ -29,6 +30,7 @@ interface TransactionsTabsProps {
   drafts: TransactionDraft[];
   categories: Category[];
   gmailConnectUrl: string;
+  isGmailConnected: boolean;
 }
 
 const tabs = [
@@ -39,7 +41,14 @@ const tabs = [
 
 type TabId = (typeof tabs)[number]["id"];
 
-export function TransactionsTabs({ manual, scheduled, drafts, categories, gmailConnectUrl }: TransactionsTabsProps) {
+export function TransactionsTabs({
+  manual,
+  scheduled,
+  drafts,
+  categories,
+  gmailConnectUrl,
+  isGmailConnected,
+}: TransactionsTabsProps) {
   const [active, setActive] = useState<TabId>("manual");
 
   return (
@@ -62,7 +71,14 @@ export function TransactionsTabs({ manual, scheduled, drafts, categories, gmailC
 
       {active === "manual" && <ManualPanel manual={manual} categories={categories} />}
       {active === "scheduled" && <ScheduledPanel scheduled={scheduled} categories={categories} />}
-      {active === "drafts" && <DraftsPanel drafts={drafts} categories={categories} gmailConnectUrl={gmailConnectUrl} />}
+      {active === "drafts" && (
+        <DraftsPanel
+          drafts={drafts}
+          categories={categories}
+          gmailConnectUrl={gmailConnectUrl}
+          isGmailConnected={isGmailConnected}
+        />
+      )}
     </div>
   );
 }
@@ -136,7 +152,17 @@ function ScheduledPanel({ scheduled, categories }: { scheduled: ScheduledTransac
   );
 }
 
-function DraftsPanel({ drafts, categories, gmailConnectUrl }: { drafts: TransactionDraft[]; categories: Category[]; gmailConnectUrl: string }) {
+function DraftsPanel({
+  drafts,
+  categories,
+  gmailConnectUrl,
+  isGmailConnected,
+}: {
+  drafts: TransactionDraft[];
+  categories: Category[];
+  gmailConnectUrl: string;
+  isGmailConnected: boolean;
+}) {
   const router = useRouter();
   const [importState, setImportState] = useState<{
     status: "idle" | "success" | "error";
@@ -145,10 +171,16 @@ function DraftsPanel({ drafts, categories, gmailConnectUrl }: { drafts: Transact
   }>({
     status: "idle",
   });
-  const [isPending, startTransition] = useTransition();
+  const [isImportPending, startImportTransition] = useTransition();
+  const [isDisconnectPending, startDisconnectTransition] = useTransition();
+  const [isDisconnectModalOpen, setDisconnectModalOpen] = useState(false);
+  const [disconnectState, setDisconnectState] = useState(initialActionState);
 
   const handleManualImport = () => {
-    startTransition(async () => {
+    if (!isGmailConnected || isImportPending) {
+      return;
+    }
+    startImportTransition(async () => {
       const result = await importEmailsAction();
       setImportState(result);
       if (result.status === "success") {
@@ -157,8 +189,64 @@ function DraftsPanel({ drafts, categories, gmailConnectUrl }: { drafts: Transact
     });
   };
 
+  const openDisconnectModal = () => {
+    setDisconnectState(initialActionState);
+    setDisconnectModalOpen(true);
+  };
+
+  const closeDisconnectModal = () => {
+    setDisconnectState(initialActionState);
+    setDisconnectModalOpen(false);
+  };
+
+  const handleDisconnect = () => {
+    startDisconnectTransition(async () => {
+      const result = await disconnectGmailAction();
+      setDisconnectState(result);
+      if (result.status === "success") {
+        setDisconnectModalOpen(false);
+        router.refresh();
+      }
+    });
+  };
+
   return (
     <div className="space-y-4">
+      {isDisconnectModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900/90 p-6 text-sm shadow-2xl" role="dialog" aria-modal="true">
+            <p className="text-base font-semibold text-white">Desvincular cuenta de Gmail</p>
+            <p className="mt-2 text-slate-300">
+              ¿Estás seguro de que deseas desvincular tu correo? Los borradores automáticos dejarán de generarse hasta que vuelvas a vincularlo.
+            </p>
+            {disconnectState.status === "error" && disconnectState.message && (
+              <p className="mt-3 text-xs text-rose-300">{disconnectState.message}</p>
+            )}
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeDisconnectModal}
+                className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold text-white transition hover:border-white/40"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleDisconnect}
+                disabled={isDisconnectPending}
+                className={clsx(
+                  "rounded-full px-4 py-2 text-xs font-semibold transition",
+                  isDisconnectPending
+                    ? "border border-rose-200/50 text-rose-100"
+                    : "bg-rose-500/90 text-white hover:bg-rose-500",
+                )}
+              >
+                {isDisconnectPending ? "Desvinculando..." : "Desvincular"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm md:flex-row md:items-center md:justify-between">
         <div>
           <p className="font-semibold text-white">Sincronizar correos ahora</p>
@@ -170,20 +258,34 @@ function DraftsPanel({ drafts, categories, gmailConnectUrl }: { drafts: Transact
           <button
             type="button"
             onClick={handleManualImport}
-            disabled={isPending}
+            disabled={isImportPending || !isGmailConnected}
             className={clsx(
               "rounded-full px-5 py-2 text-sm font-semibold transition",
-              isPending ? "bg-white/30 text-slate-300" : "bg-white text-slate-900 hover:bg-slate-100",
+              !isGmailConnected
+                ? "cursor-not-allowed border border-white/20 text-slate-400"
+                : isImportPending
+                  ? "bg-white/30 text-slate-300"
+                  : "bg-white text-slate-900 hover:bg-slate-100",
             )}
           >
-            {isPending ? "Sincronizando..." : "Obtener correos"}
+            {isImportPending ? "Buscando..." : "Buscar correos"}
           </button>
-          <a
-            href={gmailConnectUrl}
-            className="rounded-full border border-white/30 px-5 py-2 text-center text-sm font-semibold text-white transition hover:border-white/60"
-          >
-            Conectar Gmail
-          </a>
+          {isGmailConnected ? (
+            <button
+              type="button"
+              onClick={openDisconnectModal}
+              className="rounded-full border border-rose-400/40 px-5 py-2 text-center text-sm font-semibold text-rose-100 transition hover:border-rose-200 hover:text-rose-50"
+            >
+              Desvincular Gmail
+            </button>
+          ) : (
+            <a
+              href={gmailConnectUrl}
+              className="rounded-full border border-white/30 px-5 py-2 text-center text-sm font-semibold text-white transition hover:border-white/60"
+            >
+              Vincular Gmail
+            </a>
+          )}
         </div>
       </div>
       <p className="text-[11px] text-slate-400">

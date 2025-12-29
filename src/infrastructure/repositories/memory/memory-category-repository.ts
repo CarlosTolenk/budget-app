@@ -60,4 +60,12 @@ export class MemoryCategoryRepository implements CategoryRepository {
     this.categories = this.categories.map((category) => (category.id === input.id ? updated : category));
     return updated;
   }
+
+  async delete(input: { id: string; userId: string }): Promise<void> {
+    const exists = this.categories.some((category) => category.id === input.id && category.userId === input.userId);
+    if (!exists) {
+      throw new Error("Categoría no encontrada");
+    }
+    this.categories = this.categories.filter((category) => !(category.id === input.id && category.userId === input.userId));
+  }
 }

@@ -27,13 +27,15 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
         ? gmailErrorMessages[gmailReason ?? "unexpected"] ?? "No se pudo conectar tu cuenta de Gmail."
         : undefined;
 
-  const [transactions, categories, scheduled, drafts] = await Promise.all([
+  const [transactions, categories, scheduled, drafts, gmailCredential] = await Promise.all([
     container.listTransactionsUseCase.execute({ userId }),
     container.listCategoriesUseCase.execute(userId),
     container.listScheduledTransactionsUseCase.execute(userId),
     container.listTransactionDraftsUseCase.execute(userId),
+    container.gmailCredentialRepository.findByUserId(userId),
   ]);
   const gmailConnectUrl = "/api/oauth/google/start?redirectTo=/transactions";
+  const isGmailConnected = Boolean(gmailCredential);
 
   return (
     <div className="flex flex-col gap-8">
@@ -64,6 +66,7 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
         drafts={drafts}
         categories={categories}
         gmailConnectUrl={gmailConnectUrl}
+        isGmailConnected={isGmailConnected}
       />
     </div>
   );

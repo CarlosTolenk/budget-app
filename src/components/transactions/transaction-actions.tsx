@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { Category } from "@/domain/categories/category";
 import { Transaction } from "@/domain/transactions/transaction";
 import { deleteTransactionAction } from "@/app/actions/delete-transaction-action";
 import { updateTransactionAction } from "@/app/actions/update-transaction-action";
 import { initialActionState } from "@/app/actions/action-state";
 import { format } from "date-fns";
+import { ModalConfirmButton } from "@/components/ui/modal-confirm-button";
 
 const buckets = [
   { value: "NEEDS", label: "Needs" },
@@ -25,6 +26,7 @@ export function TransactionActions({ transaction, categories }: TransactionActio
   const [deleteState, deleteAction] = useActionState(deleteTransactionAction, initialActionState);
   const [bucket, setBucket] = useState<"NEEDS" | "WANTS" | "SAVINGS">(transaction.bucket);
   const [categoryId, setCategoryId] = useState(transaction.categoryId ?? "");
+  const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
 
   const filteredCategories = useMemo(
     () => categories.filter((category) => category.bucket === bucket),
@@ -43,6 +45,12 @@ export function TransactionActions({ transaction, categories }: TransactionActio
 
   const canSubmit = filteredCategories.length > 0 && Boolean(resolvedCategoryId);
 
+  useEffect(() => {
+    if (deleteState.status === "success") {
+      setTransactionToDelete(null);
+    }
+  }, [deleteState.status]);
+
   return (
     <div className="mt-2 space-y-2 text-xs">
       <div className="flex gap-2">
@@ -53,20 +61,13 @@ export function TransactionActions({ transaction, categories }: TransactionActio
         >
           {isEditing ? "Cerrar" : "Editar"}
         </button>
-        <form action={deleteAction} className="inline">
-          <input type="hidden" name="transactionId" value={transaction.id} />
-          <button
-            type="submit"
-            className="rounded-full border border-rose-300 px-3 py-1 text-xs text-rose-200"
-            onClick={(event) => {
-              if (!confirm("¿Eliminar transacción?")) {
-                event.preventDefault();
-              }
-            }}
-          >
-            Eliminar
-          </button>
-        </form>
+        <button
+          type="button"
+          onClick={() => setTransactionToDelete(transaction)}
+          className="rounded-full border border-rose-300 px-3 py-1 text-xs text-rose-200 transition hover:border-rose-200"
+        >
+          Eliminar
+        </button>
       </div>
       {deleteState.status === "error" && <p className="text-rose-300">{deleteState.message}</p>}
       {isEditing && (
@@ -143,6 +144,31 @@ export function TransactionActions({ transaction, categories }: TransactionActio
           )}
         </form>
       )}
+      {transactionToDelete ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900/90 p-6 text-sm shadow-2xl" role="dialog" aria-modal="true">
+            <p className="text-base font-semibold text-white">Eliminar transacción</p>
+            <p className="mt-2 text-slate-300">
+              ¿Seguro que deseas eliminar{" "}
+              <span className="font-semibold text-white">{transactionToDelete.merchant ?? "esta transacción"}</span>? Esta acción no se puede deshacer.
+            </p>
+            {deleteState.status === "error" && deleteState.message && (
+              <p className="mt-3 text-xs text-rose-300">{deleteState.message}</p>
+            )}
+            <form action={deleteAction} className="mt-6 flex justify-end gap-2">
+              <input type="hidden" name="transactionId" value={transactionToDelete.id} />
+              <button
+                type="button"
+                onClick={() => setTransactionToDelete(null)}
+                className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold text-white transition hover:border-white/40"
+              >
+                Cancelar
+              </button>
+              <ModalConfirmButton label="Eliminar" pendingLabel="Eliminando..." variant="danger" />
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

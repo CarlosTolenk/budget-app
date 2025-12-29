@@ -6,6 +6,7 @@ import { ProcessIncomingEmailsUseCase } from "@/application/use-cases/process-in
 import { UpsertBudgetUseCase } from "@/application/use-cases/upsert-budget";
 import { CreateCategoryUseCase } from "@/application/use-cases/create-category";
 import { UpdateCategoryUseCase } from "@/application/use-cases/update-category";
+import { DeleteCategoryUseCase } from "@/application/use-cases/delete-category";
 import { CreateRuleUseCase } from "@/application/use-cases/create-rule";
 import { CreateTransactionUseCase } from "@/application/use-cases/create-transaction";
 import { UpdateTransactionUseCase } from "@/application/use-cases/update-transaction";
@@ -46,6 +47,8 @@ import { ListTransactionDraftsUseCase } from "@/application/use-cases/list-trans
 import { ApproveTransactionDraftUseCase } from "@/application/use-cases/approve-transaction-draft";
 import { DeleteTransactionDraftUseCase } from "@/application/use-cases/delete-transaction-draft";
 import { DeleteScheduledTransactionUseCase } from "@/application/use-cases/delete-scheduled-transaction";
+import { UpdateRuleUseCase } from "@/application/use-cases/update-rule";
+import { DeleteRuleUseCase } from "@/application/use-cases/delete-rule";
 import { UserRepository } from "@/domain/repositories/user-repository";
 import { PrismaUserRepository } from "@/infrastructure/repositories/prisma/prisma-user-repository";
 import { MemoryUserRepository } from "@/infrastructure/repositories/memory/memory-user-repository";
@@ -62,7 +65,10 @@ interface ServerContainer {
   upsertBudgetUseCase: UpsertBudgetUseCase;
   createCategoryUseCase: CreateCategoryUseCase;
   updateCategoryUseCase: UpdateCategoryUseCase;
+  deleteCategoryUseCase: DeleteCategoryUseCase;
   createRuleUseCase: CreateRuleUseCase;
+  updateRuleUseCase: UpdateRuleUseCase;
+  deleteRuleUseCase: DeleteRuleUseCase;
   createTransactionUseCase: CreateTransactionUseCase;
   createIncomeUseCase: CreateIncomeUseCase;
   updateIncomeUseCase: UpdateIncomeUseCase;
@@ -139,7 +145,10 @@ export function serverContainer(): ServerContainer {
     upsertBudgetUseCase: new UpsertBudgetUseCase(budgetRepository),
     createCategoryUseCase: new CreateCategoryUseCase(categoryRepository),
     updateCategoryUseCase: new UpdateCategoryUseCase(categoryRepository),
+    deleteCategoryUseCase: new DeleteCategoryUseCase(categoryRepository),
     createRuleUseCase: new CreateRuleUseCase(ruleRepository),
+    updateRuleUseCase: new UpdateRuleUseCase(ruleRepository),
+    deleteRuleUseCase: new DeleteRuleUseCase(ruleRepository),
     createTransactionUseCase: new CreateTransactionUseCase(transactionRepository),
     updateTransactionUseCase: new UpdateTransactionUseCase(transactionRepository),
     deleteTransactionUseCase: new DeleteTransactionUseCase(transactionRepository),

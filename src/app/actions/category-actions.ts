@@ -81,3 +81,30 @@ export async function updateCategoryAction(_prevState: ActionState, formData: Fo
     return { status: "error", message: (error as Error).message };
   }
 }
+
+const deleteSchema = z.object({
+  id: z.string().min(1),
+});
+
+export async function deleteCategoryAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const result = deleteSchema.safeParse({
+    id: formData.get("id"),
+  });
+
+  if (!result.success) {
+    return { status: "error", message: "Categoría inválida para eliminar" };
+  }
+
+  try {
+    const { appUser } = await requireAuth();
+    const { deleteCategoryUseCase } = serverContainer();
+    await deleteCategoryUseCase.execute({ userId: appUser.id, categoryId: result.data.id });
+    revalidatePath("/");
+    revalidatePath("/budget");
+    revalidatePath("/transactions");
+    return { status: "success", message: "Categoría eliminada" };
+  } catch (error) {
+    console.error(error);
+    return { status: "error", message: (error as Error).message };
+  }
+}

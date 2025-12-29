@@ -2,9 +2,10 @@
 
 import { useActionState, useEffect, useState } from "react";
 import type { Income } from "@/domain/income/income";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatMonthLabel } from "@/lib/format";
 import { initialActionState } from "@/app/actions/action-state";
 import { updateIncomeAction, deleteIncomeAction } from "@/app/actions/income-actions";
+import { ModalConfirmButton } from "@/components/ui/modal-confirm-button";
 
 interface IncomeListProps {
   incomes: Income[];
@@ -14,6 +15,7 @@ export function IncomeList({ incomes }: IncomeListProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [updateState, updateAction] = useActionState(updateIncomeAction, initialActionState);
   const [deleteState, deleteAction] = useActionState(deleteIncomeAction, initialActionState);
+  const [incomeToDelete, setIncomeToDelete] = useState<Income | null>(null);
 
   useEffect(() => {
     if (updateState.status === "success") {
@@ -21,6 +23,12 @@ export function IncomeList({ incomes }: IncomeListProps) {
       setEditingId(null);
     }
   }, [updateState.status]);
+
+  useEffect(() => {
+    if (deleteState.status === "success") {
+      setIncomeToDelete(null);
+    }
+  }, [deleteState.status]);
 
   if (!incomes.length) {
     return (
@@ -81,7 +89,7 @@ export function IncomeList({ incomes }: IncomeListProps) {
             <li key={income.id} className="flex flex-col gap-2 rounded-xl border border-white/10 px-3 py-2 md:flex-row md:items-center md:justify-between">
               <div>
                 <p className="font-medium">{income.name}</p>
-                <p className="text-xs text-slate-400">{income.month}</p>
+                <p className="text-xs text-slate-400">{formatMonthLabel(income.month)}</p>
               </div>
               <div className="flex items-center gap-3">
                 <p className="text-emerald-300">{formatCurrency(income.amount)}</p>
@@ -92,19 +100,13 @@ export function IncomeList({ incomes }: IncomeListProps) {
                 >
                   Editar
                 </button>
-                <form
-                  action={deleteAction}
-                  onSubmit={(event) => {
-                    if (!confirm("¿Eliminar este ingreso?")) {
-                      event.preventDefault();
-                    }
-                  }}
+                <button
+                  type="button"
+                  onClick={() => setIncomeToDelete(income)}
+                  className="rounded-full border border-rose-300/40 px-3 py-1 text-xs font-medium text-rose-200 transition hover:border-rose-200"
                 >
-                  <input type="hidden" name="id" value={income.id} />
-                  <button className="rounded-full border border-rose-300/40 px-3 py-1 text-xs font-medium text-rose-200" type="submit">
-                    Eliminar
-                  </button>
-                </form>
+                  Eliminar
+                </button>
               </div>
             </li>
           );
@@ -116,6 +118,31 @@ export function IncomeList({ incomes }: IncomeListProps) {
       {deleteState.message && (
         <p className={`text-xs ${deleteState.status === "success" ? "text-emerald-300" : "text-rose-300"}`}>{deleteState.message}</p>
       )}
+      {incomeToDelete ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900/90 p-6 text-sm shadow-2xl" role="dialog" aria-modal="true">
+            <p className="text-base font-semibold text-white">Eliminar ingreso</p>
+            <p className="mt-2 text-slate-300">
+              ¿Seguro que deseas eliminar <span className="font-semibold text-white">{incomeToDelete.name}</span> del mes{" "}
+              {incomeToDelete.month}? Esta acción no se puede deshacer.
+            </p>
+            {deleteState.status === "error" && deleteState.message && (
+              <p className="mt-3 text-xs text-rose-300">{deleteState.message}</p>
+            )}
+            <form action={deleteAction} className="mt-6 flex justify-end gap-2">
+              <input type="hidden" name="id" value={incomeToDelete.id} />
+              <button
+                type="button"
+                onClick={() => setIncomeToDelete(null)}
+                className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold text-white transition hover:border-white/40"
+              >
+                Cancelar
+              </button>
+              <ModalConfirmButton label="Eliminar" pendingLabel="Eliminando..." variant="danger" />
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

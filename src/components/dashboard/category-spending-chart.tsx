@@ -1,6 +1,6 @@
 "use client";
 
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatMonthLabel } from "@/lib/format";
 
 interface CategorySpendingChartProps {
   month: string;
@@ -14,13 +14,14 @@ interface CategorySpendingChartProps {
 }
 
 export function CategorySpendingChart({ month, data }: CategorySpendingChartProps) {
+  const formattedMonth = formatMonthLabel(month);
   if (!data.length) {
     return (
       <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-semibold">Gasto por categoría</h2>
-            <p className="text-sm text-slate-300">{month}</p>
+            <p className="text-sm text-slate-300">{formattedMonth}</p>
           </div>
         </div>
         <p className="mt-4 text-sm text-slate-400">Aún no hay gastos registrados este mes.</p>
@@ -37,7 +38,7 @@ export function CategorySpendingChart({ month, data }: CategorySpendingChartProp
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold">Gasto por categoría</h2>
-          <p className="text-sm text-slate-300">{month}</p>
+          <p className="text-sm text-slate-300">{formattedMonth}</p>
         </div>
         <div className="text-right text-sm text-slate-300">
           <p>Plan {formatCurrency(totalPlanned)}</p>

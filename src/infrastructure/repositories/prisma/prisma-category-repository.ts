@@ -83,4 +83,11 @@ export class PrismaCategoryRepository implements CategoryRepository {
       updatedAt: record.updatedAt,
     };
   }
+
+  async delete(input: { id: string; userId: string }): Promise<void> {
+    const result = await prisma.category.deleteMany({ where: { id: input.id, userId: input.userId } });
+    if (!result.count) {
+      throw new Error("Categoría no encontrada");
+    }
+  }
 }

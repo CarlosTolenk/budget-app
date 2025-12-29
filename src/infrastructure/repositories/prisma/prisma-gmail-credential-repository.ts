@@ -32,6 +32,10 @@ export class PrismaGmailCredentialRepository implements GmailCredentialRepositor
     return this.map(record);
   }
 
+  async deleteByUserId(userId: string): Promise<void> {
+    await prisma.gmailCredential.deleteMany({ where: { userId } });
+  }
+
   private map(record: {
     id: string;
     userId: string;
