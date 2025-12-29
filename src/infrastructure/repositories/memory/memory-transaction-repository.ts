@@ -5,18 +5,25 @@ import { memoryTransactions } from "./memory-data";
 export class MemoryTransactionRepository implements TransactionRepository {
   private transactions = [...memoryTransactions];
 
-  async findByMonth(monthId: string): Promise<Transaction[]> {
+  async findByMonth(monthId: string, userId: string): Promise<Transaction[]> {
     return this.transactions
-      .filter((transaction) => transaction.date.toISOString().startsWith(monthId))
+      .filter((transaction) => transaction.userId === userId && transaction.date.toISOString().startsWith(monthId))
       .sort((a, b) => b.date.getTime() - a.date.getTime());
   }
 
-  async findRecent(limit: number): Promise<Transaction[]> {
-    return [...this.transactions].sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, limit);
+  async findRecent(limit: number, userId: string): Promise<Transaction[]> {
+    return this.transactions
+      .filter((transaction) => transaction.userId === userId)
+      .sort((a, b) => b.date.getTime() - a.date.getTime())
+      .slice(0, limit);
   }
 
-  async findByEmailMessageId(emailMessageId: string): Promise<Transaction | null> {
-    return this.transactions.find((transaction) => transaction.emailMessageId === emailMessageId) ?? null;
+  async findByEmailMessageId(emailMessageId: string, userId: string): Promise<Transaction | null> {
+    return (
+      this.transactions.find(
+        (transaction) => transaction.userId === userId && transaction.emailMessageId === emailMessageId,
+      ) ?? null
+    );
   }
 
   async createMany(transactions: CreateTransactionInput[]): Promise<number> {
@@ -43,8 +50,8 @@ export class MemoryTransactionRepository implements TransactionRepository {
     return created;
   }
 
-  async update(id: string, data: Partial<CreateTransactionInput>): Promise<Transaction> {
-    const index = this.transactions.findIndex((transaction) => transaction.id === id);
+  async update(id: string, userId: string, data: Partial<CreateTransactionInput>): Promise<Transaction> {
+    const index = this.transactions.findIndex((transaction) => transaction.id === id && transaction.userId === userId);
     if (index === -1) {
       throw new Error("Transaction not found");
     }
@@ -59,7 +66,7 @@ export class MemoryTransactionRepository implements TransactionRepository {
     return updated;
   }
 
-  async delete(id: string): Promise<void> {
-    this.transactions = this.transactions.filter((transaction) => transaction.id !== id);
+  async delete(id: string, userId: string): Promise<void> {
+    this.transactions = this.transactions.filter((transaction) => !(transaction.id === id && transaction.userId === userId));
   }
 }

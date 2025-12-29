@@ -19,7 +19,8 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   noStore();
-  await requireAuth();
+  const { appUser } = await requireAuth();
+  const userId = appUser.id;
   const headersList = await headers();
   const headerUrl = headersList.get("next-url");
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
@@ -33,11 +34,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const selectedMonth = requestedMonth && monthRegex.test(requestedMonth) ? requestedMonth : format(new Date(), "yyyy-MM");
   const container = serverContainer();
   const [summary, transactions, categories, rules, yearlyOverview] = await Promise.all([
-    container.getDashboardSummaryUseCase.execute({ monthId: selectedMonth, now: new Date() }),
-    container.listTransactionsUseCase.execute({ monthId: selectedMonth }),
-    container.listCategoriesUseCase.execute(),
-    container.listRulesUseCase.execute(),
-    container.getYearlyOverviewUseCase.execute({ monthsBack: 6, baseMonth: selectedMonth }),
+    container.getDashboardSummaryUseCase.execute({ userId, monthId: selectedMonth, now: new Date() }),
+    container.listTransactionsUseCase.execute({ userId, monthId: selectedMonth }),
+    container.listCategoriesUseCase.execute(userId),
+    container.listRulesUseCase.execute(userId),
+    container.getYearlyOverviewUseCase.execute({ userId, monthsBack: 6, baseMonth: selectedMonth }),
   ]);
 
   const remainingDescription =

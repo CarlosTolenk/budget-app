@@ -45,6 +45,9 @@ import { ListTransactionDraftsUseCase } from "@/application/use-cases/list-trans
 import { ApproveTransactionDraftUseCase } from "@/application/use-cases/approve-transaction-draft";
 import { DeleteTransactionDraftUseCase } from "@/application/use-cases/delete-transaction-draft";
 import { DeleteScheduledTransactionUseCase } from "@/application/use-cases/delete-scheduled-transaction";
+import { UserRepository } from "@/domain/repositories/user-repository";
+import { PrismaUserRepository } from "@/infrastructure/repositories/prisma/prisma-user-repository";
+import { MemoryUserRepository } from "@/infrastructure/repositories/memory/memory-user-repository";
 
 interface ServerContainer {
   getDashboardSummaryUseCase: GetDashboardSummaryUseCase;
@@ -72,6 +75,7 @@ interface ServerContainer {
   approveTransactionDraftUseCase: ApproveTransactionDraftUseCase;
   deleteTransactionDraftUseCase: DeleteTransactionDraftUseCase;
   deleteScheduledTransactionUseCase: DeleteScheduledTransactionUseCase;
+  userRepository: UserRepository;
 }
 
 let cachedContainer: ServerContainer | null = null;
@@ -92,6 +96,7 @@ export function serverContainer(): ServerContainer {
     ? new PrismaScheduledTransactionRepository()
     : new MemoryScheduledTransactionRepository();
   const draftRepository = hasDatabase ? new PrismaTransactionDraftRepository() : new MemoryTransactionDraftRepository();
+  const userRepository = hasDatabase ? new PrismaUserRepository() : new MemoryUserRepository();
 
   const hasGmailCredentials = Boolean(env.GMAIL_CLIENT_ID && env.GMAIL_CLIENT_SECRET && env.GMAIL_REFRESH_TOKEN);
 
@@ -147,6 +152,7 @@ export function serverContainer(): ServerContainer {
     approveTransactionDraftUseCase: new ApproveTransactionDraftUseCase(draftRepository, transactionRepository, categoryRepository),
     deleteTransactionDraftUseCase: new DeleteTransactionDraftUseCase(draftRepository),
     getFinancialStatsUseCase: financialStatsUseCase,
+    userRepository,
   };
 
   return cachedContainer;

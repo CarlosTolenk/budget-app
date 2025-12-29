@@ -9,12 +9,13 @@ import { IncomeList } from "@/components/budget/income-list";
 import { CategoryManager } from "@/components/budget/category-manager";
 
 export default async function BudgetPage() {
-  await requireAuth();
+  const { appUser } = await requireAuth();
+  const userId = appUser.id;
   const container = serverContainer();
   const [summary, categories, incomes] = await Promise.all([
-    container.getDashboardSummaryUseCase.execute(),
-    container.listCategoriesUseCase.execute(),
-    container.listIncomesUseCase.execute(),
+    container.getDashboardSummaryUseCase.execute({ userId }),
+    container.listCategoriesUseCase.execute(userId),
+    container.listIncomesUseCase.execute(userId),
   ]);
 
   const byBucket = categories.reduce<Record<string, typeof categories>>((acc, category) => {

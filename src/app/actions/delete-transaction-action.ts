@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { serverContainer } from "@/infrastructure/config/server-container";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { ActionState } from "./action-state";
 
 const schema = z.object({ id: z.string().min(1) });
@@ -14,8 +15,9 @@ export async function deleteTransactionAction(_prev: ActionState, formData: Form
   }
 
   try {
+    const { appUser } = await requireAuth();
     const { deleteTransactionUseCase } = serverContainer();
-    await deleteTransactionUseCase.execute(result.data.id);
+    await deleteTransactionUseCase.execute(appUser.id, result.data.id);
     revalidatePath("/");
     revalidatePath("/transactions");
     return { status: "success", message: "Transacción eliminada" };

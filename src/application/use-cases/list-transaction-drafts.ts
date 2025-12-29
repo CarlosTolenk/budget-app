@@ -4,8 +4,8 @@ import { TransactionDraftRepository } from "@/domain/repositories";
 export class ListTransactionDraftsUseCase {
   constructor(private readonly transactionDraftRepository: TransactionDraftRepository) {}
 
-  async execute(): Promise<TransactionDraft[]> {
-    const drafts = await this.transactionDraftRepository.listAll();
+  async execute(userId: string): Promise<TransactionDraft[]> {
+    const drafts = await this.transactionDraftRepository.listAll(userId);
 
     return drafts
       .slice()

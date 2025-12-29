@@ -4,5 +4,5 @@ import { CreateTransactionInput } from "@/domain/transactions/transaction";
 export interface BankAdapter {
   readonly name: string;
   matches(message: EmailMessage): boolean;
-  parse(message: EmailMessage): Omit<CreateTransactionInput, "id"> | null;
+  parse(message: EmailMessage): Omit<CreateTransactionInput, "id" | "userId"> | null;
 }

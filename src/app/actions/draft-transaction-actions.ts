@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { serverContainer } from "@/infrastructure/config/server-container";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { ActionState } from "./action-state";
 
 const approveSchema = z.object({
@@ -32,9 +33,10 @@ export async function approveDraftAction(_prev: ActionState, formData: FormData)
   }
 
   try {
+    const { appUser } = await requireAuth();
     const { approveTransactionDraftUseCase } = serverContainer();
     const { id, ...overrides } = result.data;
-    await approveTransactionDraftUseCase.execute(id, overrides);
+    await approveTransactionDraftUseCase.execute(appUser.id, id, overrides);
     revalidatePath("/transactions");
     revalidatePath("/");
     return { status: "success", message: "Borrador aprobado" };
@@ -51,8 +53,9 @@ export async function deleteDraftAction(_prev: ActionState, formData: FormData):
   }
 
   try {
+    const { appUser } = await requireAuth();
     const { deleteTransactionDraftUseCase } = serverContainer();
-    await deleteTransactionDraftUseCase.execute(result.data.id);
+    await deleteTransactionDraftUseCase.execute(appUser.id, result.data.id);
     revalidatePath("/transactions");
     return { status: "success", message: "Borrador eliminado" };
   } catch (error) {

@@ -5,8 +5,8 @@ import { memoryBudget } from "./memory-data";
 export class MemoryBudgetRepository implements BudgetRepository {
   private budget = memoryBudget;
 
-  async getByMonth(monthId: string): Promise<Budget | null> {
-    return this.budget.month === monthId ? this.budget : null;
+  async getByMonth(monthId: string, userId: string): Promise<Budget | null> {
+    return this.budget.month === monthId && this.budget.userId === userId ? this.budget : null;
   }
 
   async upsert(budget: Budget): Promise<void> {

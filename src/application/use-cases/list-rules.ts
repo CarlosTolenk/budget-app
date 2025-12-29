@@ -4,7 +4,7 @@ import { Rule } from "@/domain/rules/rule";
 export class ListRulesUseCase {
   constructor(private readonly ruleRepository: RuleRepository) {}
 
-  async execute(): Promise<Rule[]> {
-    return this.ruleRepository.listAll();
+  async execute(userId: string): Promise<Rule[]> {
+    return this.ruleRepository.listAll(userId);
   }
 }

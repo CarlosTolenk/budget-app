@@ -1,6 +1,6 @@
 import { Rule } from "../rules/rule";
 
 export interface RuleRepository {
-  listAll(): Promise<Rule[]>;
-  create(input: { pattern: string; priority?: number; categoryId: string }): Promise<Rule>;
+  listAll(userId: string): Promise<Rule[]>;
+  create(input: { userId: string; pattern: string; priority?: number; categoryId: string }): Promise<Rule>;
 }

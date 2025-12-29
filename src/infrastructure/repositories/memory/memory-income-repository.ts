@@ -5,13 +5,14 @@ import { memoryIncomes } from "./memory-data";
 export class MemoryIncomeRepository implements IncomeRepository {
   private incomes = [...memoryIncomes];
 
-  async listByMonth(monthId: string): Promise<Income[]> {
-    return this.incomes.filter((income) => income.month === monthId);
+  async listByMonth(monthId: string, userId: string): Promise<Income[]> {
+    return this.incomes.filter((income) => income.userId === userId && income.month === monthId);
   }
 
-  async create(input: { month: string; name: string; amount: number }): Promise<Income> {
+  async create(input: { userId: string; month: string; name: string; amount: number }): Promise<Income> {
     const income: Income = {
       id: `inc-${Math.random().toString(36).slice(2)}`,
+      userId: input.userId,
       month: input.month,
       name: input.name,
       amount: input.amount,
@@ -22,8 +23,8 @@ export class MemoryIncomeRepository implements IncomeRepository {
     return income;
   }
 
-  async update(input: { id: string; name: string; amount: number }): Promise<Income> {
-    const index = this.incomes.findIndex((income) => income.id === input.id);
+  async update(input: { id: string; userId: string; name: string; amount: number }): Promise<Income> {
+    const index = this.incomes.findIndex((income) => income.id === input.id && income.userId === input.userId);
     if (index === -1) {
       throw new Error("Ingreso no encontrado");
     }
@@ -37,8 +38,8 @@ export class MemoryIncomeRepository implements IncomeRepository {
     return updated;
   }
 
-  async delete(id: string): Promise<Income | null> {
-    const index = this.incomes.findIndex((income) => income.id === id);
+  async delete(id: string, userId: string): Promise<Income | null> {
+    const index = this.incomes.findIndex((income) => income.id === id && income.userId === userId);
     if (index === -1) {
       return null;
     }
@@ -46,9 +47,9 @@ export class MemoryIncomeRepository implements IncomeRepository {
     return removed;
   }
 
-  async getTotalForMonth(monthId: string): Promise<number> {
+  async getTotalForMonth(monthId: string, userId: string): Promise<number> {
     return this.incomes
-      .filter((income) => income.month === monthId)
+      .filter((income) => income.userId === userId && income.month === monthId)
       .reduce((sum, income) => sum + income.amount, 0);
   }
 }

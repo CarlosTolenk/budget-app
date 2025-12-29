@@ -3,6 +3,7 @@ import { TransactionRepository } from "@/domain/repositories";
 import { Bucket } from "@/domain/value-objects/bucket";
 
 interface CreateTransactionInput {
+  userId: string;
   date: Date;
   amount: number;
   currency: string;
@@ -16,6 +17,7 @@ export class CreateTransactionUseCase {
 
   async execute(input: CreateTransactionInput): Promise<Transaction> {
     return this.transactionRepository.create({
+      userId: input.userId,
       date: input.date,
       amount: input.amount,
       currency: input.currency,

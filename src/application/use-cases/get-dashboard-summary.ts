@@ -4,6 +4,7 @@ import { Bucket, bucketCopy, bucketOrder } from "@/domain/value-objects/bucket";
 import { DashboardSummary } from "../dtos/dashboard";
 
 interface GetDashboardSummaryInput {
+  userId: string;
   monthId?: string;
   now?: Date;
 }
@@ -15,12 +16,12 @@ export class GetDashboardSummaryUseCase {
     private readonly categoryRepository: CategoryRepository,
   ) {}
 
-  async execute({ monthId, now = new Date() }: GetDashboardSummaryInput = {}): Promise<DashboardSummary> {
+  async execute({ userId, monthId, now = new Date() }: GetDashboardSummaryInput): Promise<DashboardSummary> {
     const resolvedMonthId = monthId ?? format(now, "yyyy-MM");
     const [budget, transactions, categories] = await Promise.all([
-      this.budgetRepository.getByMonth(resolvedMonthId),
-      this.transactionRepository.findByMonth(resolvedMonthId),
-      this.categoryRepository.listAll(),
+      this.budgetRepository.getByMonth(resolvedMonthId, userId),
+      this.transactionRepository.findByMonth(resolvedMonthId, userId),
+      this.categoryRepository.listAll(userId),
     ]);
 
     const income = budget?.income ?? transactions.reduce((sum, t) => sum + (t.amount > 0 ? t.amount : 0), 0);

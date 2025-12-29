@@ -13,6 +13,7 @@ export interface YearlyOverview {
 }
 
 interface GetYearlyOverviewInput {
+  userId: string;
   monthsBack?: number;
   baseMonth?: string;
 }
@@ -23,15 +24,15 @@ export class GetYearlyOverviewUseCase {
     private readonly transactionRepository: TransactionRepository,
   ) {}
 
-  async execute({ monthsBack = 6, baseMonth }: GetYearlyOverviewInput = {}): Promise<YearlyOverview> {
+  async execute({ userId, monthsBack = 6, baseMonth }: GetYearlyOverviewInput): Promise<YearlyOverview> {
     const anchor = baseMonth && /^\d{4}-\d{2}$/.test(baseMonth) ? parseISO(`${baseMonth}-01`) : new Date();
     const months: MonthlyOverview[] = [];
 
     for (let offset = monthsBack - 1; offset >= 0; offset--) {
       const date = subMonths(anchor, offset);
       const monthId = format(date, "yyyy-MM");
-      const income = await this.incomeRepository.getTotalForMonth(monthId);
-      const transactions = await this.transactionRepository.findByMonth(monthId);
+      const income = await this.incomeRepository.getTotalForMonth(monthId, userId);
+      const transactions = await this.transactionRepository.findByMonth(monthId, userId);
       const expenses = transactions
         .filter((transaction) => transaction.amount < 0)
         .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);

@@ -5,3 +5,4 @@ export * from "./rule-repository";
 export * from "./income-repository";
 export * from "./scheduled-transaction-repository";
 export * from "./transaction-draft-repository";
+export * from "./user-repository";

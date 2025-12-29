@@ -4,15 +4,19 @@ import { CreateDraftInput, TransactionDraft } from "@/domain/transaction-drafts/
 import { prisma } from "@/infrastructure/db/prisma-client";
 
 export class PrismaTransactionDraftRepository implements TransactionDraftRepository {
-  async listAll(): Promise<TransactionDraft[]> {
+  async listAll(userId: string): Promise<TransactionDraft[]> {
     try {
-      const records = await prisma.transactionDraft.findMany({ orderBy: { createdAt: "desc" } });
+      const records = await prisma.transactionDraft.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+      });
       return records.map((record) => this.map(record)).filter((draft): draft is TransactionDraft => draft !== null);
     } catch (error) {
       console.warn("PrismaTransactionDraftRepository.listAll fallback due to:", error);
       const rawRecords = await prisma.$queryRaw<Array<RawDraftRow>>(Prisma.sql`
         SELECT
           id,
+          "userId",
           CAST(date AS TEXT) AS dateText,
           CAST(amount AS TEXT) AS amountText,
           currency,
@@ -24,6 +28,7 @@ export class PrismaTransactionDraftRepository implements TransactionDraftReposit
           CAST(createdAt AS TEXT) AS createdAtText,
           CAST(updatedAt AS TEXT) AS updatedAtText
         FROM "TransactionDraft"
+        WHERE "userId" = ${userId}
         ORDER BY "createdAt" DESC
       `);
 
@@ -36,6 +41,7 @@ export class PrismaTransactionDraftRepository implements TransactionDraftReposit
   async create(input: CreateDraftInput): Promise<TransactionDraft> {
     const record = await prisma.transactionDraft.create({
       data: {
+        userId: input.userId,
         date: input.date,
         amount: input.amount.toString(),
         currency: input.currency,
@@ -53,33 +59,33 @@ export class PrismaTransactionDraftRepository implements TransactionDraftReposit
     return mapped;
   }
 
-  async delete(id: string): Promise<void> {
+  async delete(id: string, userId: string): Promise<void> {
     try {
-      await prisma.transactionDraft.delete({ where: { id } });
+      await prisma.transactionDraft.deleteMany({ where: { id, userId } });
     } catch (error) {
       console.warn("PrismaTransactionDraftRepository.delete fallback due to:", error);
-      await prisma.$executeRaw`DELETE FROM "TransactionDraft" WHERE "id" = ${id}`;
+      await prisma.$executeRaw`DELETE FROM "TransactionDraft" WHERE "id" = ${id} AND "userId" = ${userId}`;
     }
   }
 
-  async findByEmailMessageId(emailMessageId: string): Promise<TransactionDraft | null> {
+  async findByEmailMessageId(emailMessageId: string, userId: string): Promise<TransactionDraft | null> {
     try {
-      const record = await prisma.transactionDraft.findUnique({ where: { emailMessageId } });
+      const record = await prisma.transactionDraft.findFirst({ where: { emailMessageId, userId } });
       return record ? this.map(record) ?? null : null;
     } catch (error) {
       console.warn("PrismaTransactionDraftRepository.findByEmailMessageId fallback due to:", error);
-      const raw = await this.fetchRawWhere("emailMessageId", emailMessageId);
+      const raw = await this.fetchRawWhere({ field: "emailMessageId", value: emailMessageId, userId });
       return raw ? this.mapRaw(raw) : null;
     }
   }
 
-  async findById(id: string): Promise<TransactionDraft | null> {
+  async findById(id: string, userId: string): Promise<TransactionDraft | null> {
     try {
-      const record = await prisma.transactionDraft.findUnique({ where: { id } });
+      const record = await prisma.transactionDraft.findFirst({ where: { id, userId } });
       return record ? this.map(record) ?? null : null;
     } catch (error) {
       console.warn("PrismaTransactionDraftRepository.findById fallback due to:", error);
-      const raw = await this.fetchRawWhere("id", id);
+      const raw = await this.fetchRawWhere({ field: "id", value: id, userId });
       return raw ? this.mapRaw(raw) : null;
     }
   }
@@ -92,6 +98,7 @@ export class PrismaTransactionDraftRepository implements TransactionDraftReposit
 
     return {
       id: record.id,
+      userId: record.userId,
       amount,
       bucket: record.bucket,
       categoryId: record.categoryId ?? undefined,
@@ -143,6 +150,7 @@ export class PrismaTransactionDraftRepository implements TransactionDraftReposit
     }
     return {
       id: record.id,
+      userId: record.userId,
       amount,
       bucket: record.bucket as TransactionDraft["bucket"],
       categoryId: record.categoryId ?? undefined,
@@ -174,7 +182,8 @@ export class PrismaTransactionDraftRepository implements TransactionDraftReposit
     return undefined;
   }
 
-  private async fetchRawWhere(field: "id" | "emailMessageId", value: string): Promise<RawDraftRow | null> {
+  private async fetchRawWhere(params: { field: "id" | "emailMessageId"; value: string; userId: string }): Promise<RawDraftRow | null> {
+    const { field, value, userId } = params;
     const whereClause =
       field === "id"
         ? Prisma.sql`"id" = ${value}`
@@ -183,6 +192,7 @@ export class PrismaTransactionDraftRepository implements TransactionDraftReposit
     const rows = await prisma.$queryRaw<Array<RawDraftRow>>(Prisma.sql`
       SELECT
         id,
+        "userId",
         CAST(date AS TEXT) AS dateText,
         CAST(amount AS TEXT) AS amountText,
         currency,
@@ -194,7 +204,7 @@ export class PrismaTransactionDraftRepository implements TransactionDraftReposit
         CAST(createdAt AS TEXT) AS createdAtText,
         CAST(updatedAt AS TEXT) AS updatedAtText
       FROM "TransactionDraft"
-      WHERE ${whereClause}
+      WHERE ${whereClause} AND "userId" = ${userId}
       LIMIT 1
     `);
     return rows[0] ?? null;
@@ -203,6 +213,7 @@ export class PrismaTransactionDraftRepository implements TransactionDraftReposit
 
 type RawDraftRow = {
   id: string;
+  userId: string;
   dateText: string;
   amountText: string | number | null;
   currency: string;

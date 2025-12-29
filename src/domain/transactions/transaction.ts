@@ -4,6 +4,7 @@ export type TransactionSource = "EMAIL" | "MANUAL" | "SCHEDULED";
 
 export interface Transaction {
   id: string;
+  userId: string;
   date: Date;
   amount: number;
   currency: string;
@@ -19,6 +20,7 @@ export interface Transaction {
 
 export interface CreateTransactionInput {
   id?: string;
+  userId: string;
   date: Date;
   amount: number;
   currency: string;

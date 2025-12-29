@@ -17,8 +17,8 @@ export class ApproveTransactionDraftUseCase {
     private readonly categoryRepository: CategoryRepository,
   ) {}
 
-  async execute(id: string, overrides: DraftOverride = {}): Promise<void> {
-    const draft = await this.transactionDraftRepository.findById(id);
+  async execute(userId: string, id: string, overrides: DraftOverride = {}): Promise<void> {
+    const draft = await this.transactionDraftRepository.findById(id, userId);
     if (!draft) {
       throw new Error("Draft no encontrado");
     }
@@ -30,7 +30,7 @@ export class ApproveTransactionDraftUseCase {
       throw new Error("La categoría es requerida para aprobar");
     }
 
-    const category = await this.categoryRepository.findById(categoryId);
+    const category = await this.categoryRepository.findById(categoryId, userId);
     if (!category) {
       throw new Error("Categoría no encontrada");
     }
@@ -43,6 +43,7 @@ export class ApproveTransactionDraftUseCase {
     const normalizedAmount = rawAmount < 0 ? rawAmount : -Math.abs(rawAmount);
 
     await this.transactionRepository.create({
+      userId,
       date: overrides.date ?? draft.date,
       amount: normalizedAmount,
       currency: overrides.currency ?? draft.currency,
@@ -54,6 +55,6 @@ export class ApproveTransactionDraftUseCase {
       rawPayload: draft.rawPayload ?? undefined,
     });
 
-    await this.transactionDraftRepository.delete(id);
+    await this.transactionDraftRepository.delete(id, userId);
   }
 }

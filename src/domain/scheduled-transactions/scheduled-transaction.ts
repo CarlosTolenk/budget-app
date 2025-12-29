@@ -4,6 +4,7 @@ export type ScheduledRecurrence = "MONTHLY";
 
 export interface ScheduledTransaction {
   id: string;
+  userId: string;
   name: string;
   amount: number;
   currency: string;
@@ -20,6 +21,7 @@ export interface ScheduledTransaction {
 }
 
 export interface CreateScheduledTransactionInput {
+  userId: string;
   name: string;
   amount: number;
   currency: string;

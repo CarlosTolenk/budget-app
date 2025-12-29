@@ -6,15 +6,16 @@ import { Budget } from "@/domain/budget/budget";
 export class UpsertBudgetUseCase {
   constructor(private readonly budgetRepository: BudgetRepository) {}
 
-  async execute(input: { month?: string; income: number }): Promise<Budget> {
+  async execute(input: { userId: string; month?: string; income: number }): Promise<Budget> {
     const month = input.month ?? format(new Date(), "yyyy-MM");
-    const current = await this.budgetRepository.getByMonth(month);
+    const current = await this.budgetRepository.getByMonth(month, input.userId);
     const income = input.income;
 
     const targets = this.resolveTargets(income);
 
     const budget: Budget = {
       id: current?.id ?? randomUUID(),
+      userId: current?.userId ?? input.userId,
       month,
       income,
       needsTarget: targets.needsTarget,

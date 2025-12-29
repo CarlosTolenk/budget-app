@@ -24,8 +24,27 @@ enum ScheduledRecurrence {
   MONTHLY
 }
 
+model User {
+  id              String               @id @default(cuid())
+  supabaseUserId  String?              @unique
+  email           String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  transactions    Transaction[]
+  scheduled       ScheduledTransaction[]
+  drafts          TransactionDraft[]
+  categories      Category[]
+  budgets         Budget[]
+  rules           Rule[]
+  incomes         Income[]
+
+  @@index([supabaseUserId])
+}
+
 model Transaction {
   id             String    @id @default(cuid())
+  user           User      @relation(fields: [userId], references: [id])
+  userId         String
   date           DateTime
   amount         Decimal
   currency       String
@@ -34,14 +53,19 @@ model Transaction {
   categoryId     String?
   bucket         Bucket
   source         TransactionSource
-  emailMessageId String?   @unique
+  emailMessageId String?
   rawPayload     Json?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+
+  @@index([userId])
+  @@unique([userId, emailMessageId])
 }
 
 model ScheduledTransaction {
   id           String               @id @default(cuid())
+  user         User                 @relation(fields: [userId], references: [id])
+  userId       String
   name         String
   amount       Decimal
   currency     String
@@ -59,10 +83,13 @@ model ScheduledTransaction {
 
   @@index([nextRunDate])
   @@index([active])
+  @@index([userId])
 }
 
 model TransactionDraft {
   id             String   @id @default(cuid())
+  user           User     @relation(fields: [userId], references: [id])
+  userId         String
   date           DateTime
   amount         String
   currency       String
@@ -70,17 +97,21 @@ model TransactionDraft {
   bucket         Bucket
   category       Category? @relation(fields: [categoryId], references: [id])
   categoryId     String?
-  emailMessageId String?   @unique
+  emailMessageId String?
   rawPayload     Json?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
   @@index([bucket])
+  @@index([userId])
+  @@unique([userId, emailMessageId])
 }
 
 model Category {
   id                    String                @id @default(cuid())
-  name                  String                @unique
+  user                  User                  @relation(fields: [userId], references: [id])
+  userId                String
+  name                  String
   bucket                Bucket
   idealMonthlyAmount    Decimal               @default(0)
   transactions          Transaction[]
@@ -89,21 +120,31 @@ model Category {
   drafts                TransactionDraft[]
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
+
+  @@unique([userId, name])
+  @@index([userId])
 }
 
 model Budget {
   id            String   @id @default(cuid())
-  month         String   @unique
+  user          User     @relation(fields: [userId], references: [id])
+  userId        String
+  month         String
   income        Decimal
   needsTarget   Decimal
   wantsTarget   Decimal
   savingsTarget Decimal
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  @@unique([userId, month])
+  @@index([userId])
 }
 
 model Rule {
   id         String   @id @default(cuid())
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
   pattern    String
   priority   Int      @default(0)
   category   Category @relation(fields: [categoryId], references: [id])
@@ -112,10 +153,13 @@ model Rule {
   updatedAt  DateTime @updatedAt
 
   @@index([categoryId])
+  @@index([userId])
 }
 
 model Income {
   id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
   month     String
   name      String
   amount    Decimal
@@ -123,4 +167,5 @@ model Income {
   updatedAt DateTime @updatedAt
 
   @@index([month])
+  @@index([userId])
 }

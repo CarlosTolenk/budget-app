@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { serverContainer } from "@/infrastructure/config/server-container";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { ActionState } from "./action-state";
 
 const amountSchema = z.preprocess(
@@ -35,8 +36,9 @@ export async function createCategoryAction(_prevState: ActionState, formData: Fo
   }
 
   try {
+    const { appUser } = await requireAuth();
     const { createCategoryUseCase } = serverContainer();
-    await createCategoryUseCase.execute(result.data);
+    await createCategoryUseCase.execute({ userId: appUser.id, ...result.data });
     revalidatePath("/");
     revalidatePath("/budget");
     revalidatePath("/transactions");
@@ -67,8 +69,9 @@ export async function updateCategoryAction(_prevState: ActionState, formData: Fo
   }
 
   try {
+    const { appUser } = await requireAuth();
     const { updateCategoryUseCase } = serverContainer();
-    await updateCategoryUseCase.execute(result.data);
+    await updateCategoryUseCase.execute({ userId: appUser.id, ...result.data });
     revalidatePath("/");
     revalidatePath("/budget");
     revalidatePath("/transactions");

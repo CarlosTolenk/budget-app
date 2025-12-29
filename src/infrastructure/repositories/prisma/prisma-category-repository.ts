@@ -8,10 +8,11 @@ function toNumber(value: unknown): number {
 }
 
 export class PrismaCategoryRepository implements CategoryRepository {
-  async listAll(): Promise<Category[]> {
-    const records = await prisma.category.findMany({ orderBy: { name: "asc" } });
+  async listAll(userId: string): Promise<Category[]> {
+    const records = await prisma.category.findMany({ where: { userId }, orderBy: { name: "asc" } });
     return records.map((record) => ({
       id: record.id,
+      userId: record.userId,
       name: record.name,
       bucket: record.bucket,
       idealMonthlyAmount: toNumber(record.idealMonthlyAmount),
@@ -20,11 +21,12 @@ export class PrismaCategoryRepository implements CategoryRepository {
     }));
   }
 
-  async findById(id: string): Promise<Category | null> {
-    const record = await prisma.category.findUnique({ where: { id } });
+  async findById(id: string, userId: string): Promise<Category | null> {
+    const record = await prisma.category.findFirst({ where: { id, userId } });
     return record
       ? {
           id: record.id,
+          userId: record.userId,
           name: record.name,
           bucket: record.bucket,
           idealMonthlyAmount: toNumber(record.idealMonthlyAmount),
@@ -34,13 +36,19 @@ export class PrismaCategoryRepository implements CategoryRepository {
       : null;
   }
 
-  async create(input: { name: string; bucket: Category["bucket"]; idealMonthlyAmount: number }): Promise<Category> {
+  async create(input: {
+    userId: string;
+    name: string;
+    bucket: Category["bucket"];
+    idealMonthlyAmount: number;
+  }): Promise<Category> {
     const record = await prisma.category.create({
-      data: { name: input.name, bucket: input.bucket, idealMonthlyAmount: input.idealMonthlyAmount },
+      data: { userId: input.userId, name: input.name, bucket: input.bucket, idealMonthlyAmount: input.idealMonthlyAmount },
     });
 
     return {
       id: record.id,
+      userId: record.userId,
       name: record.name,
       bucket: record.bucket,
       idealMonthlyAmount: toNumber(record.idealMonthlyAmount),
@@ -49,7 +57,17 @@ export class PrismaCategoryRepository implements CategoryRepository {
     };
   }
 
-  async update(input: { id: string; name: string; bucket: Category["bucket"]; idealMonthlyAmount: number }): Promise<Category> {
+  async update(input: {
+    id: string;
+    userId: string;
+    name: string;
+    bucket: Category["bucket"];
+    idealMonthlyAmount: number;
+  }): Promise<Category> {
+    const existing = await prisma.category.findFirst({ where: { id: input.id, userId: input.userId } });
+    if (!existing) {
+      throw new Error("Categoría no encontrada");
+    }
     const record = await prisma.category.update({
       where: { id: input.id },
       data: { name: input.name, bucket: input.bucket, idealMonthlyAmount: input.idealMonthlyAmount },
@@ -57,6 +75,7 @@ export class PrismaCategoryRepository implements CategoryRepository {
 
     return {
       id: record.id,
+      userId: record.userId,
       name: record.name,
       bucket: record.bucket,
       idealMonthlyAmount: toNumber(record.idealMonthlyAmount),

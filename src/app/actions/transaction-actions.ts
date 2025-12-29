@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { serverContainer } from "@/infrastructure/config/server-container";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { ActionState } from "./action-state";
 
 const schema = z.object({
@@ -29,8 +30,9 @@ export async function createTransactionAction(_prevState: ActionState, formData:
   }
 
   try {
+    const { appUser } = await requireAuth();
     const { createTransactionUseCase, listCategoriesUseCase } = serverContainer();
-    const categories = await listCategoriesUseCase.execute();
+    const categories = await listCategoriesUseCase.execute(appUser.id);
     const category = categories.find((cat) => cat.id === result.data.categoryId);
     if (!category) {
       return { status: "error", message: "La categoría seleccionada no existe" };
@@ -41,7 +43,7 @@ export async function createTransactionAction(_prevState: ActionState, formData:
 
     const normalizedAmount = result.data.amount < 0 ? result.data.amount : -Math.abs(result.data.amount);
 
-    await createTransactionUseCase.execute({ ...result.data, amount: normalizedAmount });
+    await createTransactionUseCase.execute({ ...result.data, userId: appUser.id, amount: normalizedAmount });
     revalidatePath("/");
     revalidatePath("/transactions");
     revalidatePath("/budget");

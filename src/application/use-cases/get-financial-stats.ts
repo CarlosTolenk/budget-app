@@ -3,6 +3,7 @@ import { CategoryRepository, IncomeRepository, TransactionRepository } from "@/d
 import { Bucket } from "@/domain/value-objects/bucket";
 
 interface FinancialStatsInput {
+  userId: string;
   fromMonth?: string;
   toMonth?: string;
   topLimit?: number;
@@ -47,7 +48,7 @@ export class GetFinancialStatsUseCase {
     private readonly categoryRepository: CategoryRepository,
   ) {}
 
-  async execute({ fromMonth, toMonth, topLimit = 5 }: FinancialStatsInput = {}): Promise<FinancialStatsResult> {
+  async execute({ userId, fromMonth, toMonth, topLimit = 5 }: FinancialStatsInput): Promise<FinancialStatsResult> {
     const now = new Date();
     const defaultTo = now;
     const defaultFrom = subMonths(defaultTo, 5);
@@ -57,7 +58,7 @@ export class GetFinancialStatsUseCase {
     const { start, end } = this.normalizeRange(resolvedFromDate, resolvedToDate);
     const monthIds = this.buildMonthRange(start, end);
 
-    const categories = await this.categoryRepository.listAll();
+    const categories = await this.categoryRepository.listAll(userId);
     const categoryMap = new Map(categories.map((category) => [category.id, category]));
     const categoryTotals = new Map<string, number>();
     const categoryMonthlyTotals = new Map<string, Map<string, number>>();
@@ -65,8 +66,8 @@ export class GetFinancialStatsUseCase {
 
     for (const monthId of monthIds) {
       const [transactions, income] = await Promise.all([
-        this.transactionRepository.findByMonth(monthId),
-        this.incomeRepository.getTotalForMonth(monthId),
+        this.transactionRepository.findByMonth(monthId, userId),
+        this.incomeRepository.getTotalForMonth(monthId, userId),
       ]);
 
       const expenses = transactions

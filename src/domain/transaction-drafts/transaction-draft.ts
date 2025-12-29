@@ -2,6 +2,7 @@ import { Bucket } from "@/domain/value-objects/bucket";
 
 export interface TransactionDraft {
   id: string;
+  userId: string;
   date: Date;
   amount: number;
   currency: string;
@@ -16,6 +17,7 @@ export interface TransactionDraft {
 }
 
 export interface CreateDraftInput {
+  userId: string;
   date: Date;
   amount: number;
   currency: string;

@@ -26,11 +26,11 @@ export class EmailIngestionService {
     private readonly ruleRepository: RuleRepository,
   ) {}
 
-  async run(): Promise<EmailIngestionResult> {
+  async run(userId: string): Promise<EmailIngestionResult> {
     const [messages, categories, rules] = await Promise.all([
       this.provider.listMessages(),
-      this.categoryRepository.listAll(),
-      this.ruleRepository.listAll(),
+      this.categoryRepository.listAll(userId),
+      this.ruleRepository.listAll(userId),
     ]);
 
     const errors: EmailIngestionResult["errors"] = [];
@@ -40,13 +40,13 @@ export class EmailIngestionService {
       const recordSkip = (reason: EmailIngestionSkipReason) =>
         errors.push({ messageId: message.id, reason, subject: message.subject });
 
-      const exists = await this.transactionRepository.findByEmailMessageId(message.id);
+      const exists = await this.transactionRepository.findByEmailMessageId(message.id, userId);
       if (exists) {
         recordSkip("already-imported");
         continue;
       }
 
-      const existingDraft = message.id ? await this.draftRepository.findByEmailMessageId(message.id) : null;
+      const existingDraft = message.id ? await this.draftRepository.findByEmailMessageId(message.id, userId) : null;
       if (existingDraft) {
         recordSkip("already-draft");
         continue;
@@ -80,7 +80,7 @@ export class EmailIngestionService {
         adapter: adapter.name,
       };
 
-      toPersist.push({ ...parsed, categoryId, bucket, rawPayload: enrichedPayload });
+      toPersist.push({ ...parsed, userId, categoryId, bucket, rawPayload: enrichedPayload });
     }
 
     for (const draft of toPersist) {
@@ -94,7 +94,11 @@ export class EmailIngestionService {
     };
   }
 
-  private mapCategory(message: EmailMessage, rules: Awaited<ReturnType<RuleRepository["listAll"]>>, categories: Awaited<ReturnType<CategoryRepository["listAll"]>>): string | undefined {
+  private mapCategory(
+    message: EmailMessage,
+    rules: Awaited<ReturnType<RuleRepository["listAll"]>>,
+    categories: Awaited<ReturnType<CategoryRepository["listAll"]>>,
+  ): string | undefined {
     const orderedRules = [...rules].sort((a, b) => b.priority - a.priority);
     const target = `${message.subject} ${message.body}`;
     for (const rule of orderedRules) {

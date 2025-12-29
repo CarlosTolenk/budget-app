@@ -2,13 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { serverContainer } from "@/infrastructure/config/server-container";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { EmailIngestionSkipReason } from "@/modules/email-ingestion/services/email-ingestion-service";
 import { initialActionState } from "./action-state";
 
 export async function importEmailsAction() {
   try {
+    const { appUser } = await requireAuth();
     const { processIncomingEmailsUseCase } = serverContainer();
-    const result = await processIncomingEmailsUseCase.execute();
+    const result = await processIncomingEmailsUseCase.execute(appUser.id);
     revalidatePath("/transactions");
     const summary = formatImportSummary(result.imported, result.skipped, result.errors);
     const details = formatImportDetails(result.errors);

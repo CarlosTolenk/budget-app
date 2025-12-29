@@ -3,13 +3,14 @@ import { TransactionsTabs } from "@/components/transactions/transactions-tabs";
 import { requireAuth } from "@/lib/auth/require-auth";
 
 export default async function TransactionsPage() {
-  await requireAuth();
+  const { appUser } = await requireAuth();
+  const userId = appUser.id;
   const container = serverContainer();
   const [transactions, categories, scheduled, drafts] = await Promise.all([
-    container.listTransactionsUseCase.execute(),
-    container.listCategoriesUseCase.execute(),
-    container.listScheduledTransactionsUseCase.execute(),
-    container.listTransactionDraftsUseCase.execute(),
+    container.listTransactionsUseCase.execute({ userId }),
+    container.listCategoriesUseCase.execute(userId),
+    container.listScheduledTransactionsUseCase.execute(userId),
+    container.listTransactionDraftsUseCase.execute(userId),
   ]);
 
   return (

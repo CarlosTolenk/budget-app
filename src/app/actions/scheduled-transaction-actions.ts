@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { serverContainer } from "@/infrastructure/config/server-container";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { ActionState } from "./action-state";
 
 const createSchema = z.object({
@@ -35,9 +36,10 @@ export async function createScheduledTransactionAction(_prev: ActionState, formD
   }
 
   try {
+    const { appUser } = await requireAuth();
     const { createScheduledTransactionUseCase } = serverContainer();
     const normalizedAmount = result.data.amount < 0 ? result.data.amount : -Math.abs(result.data.amount);
-    await createScheduledTransactionUseCase.execute({ ...result.data, amount: normalizedAmount });
+    await createScheduledTransactionUseCase.execute({ ...result.data, userId: appUser.id, amount: normalizedAmount });
     revalidatePath("/transactions");
     return { status: "success", message: "Plan programado" };
   } catch (error) {
@@ -53,8 +55,9 @@ export async function deleteScheduledTransactionAction(_prev: ActionState, formD
   }
 
   try {
+    const { appUser } = await requireAuth();
     const { deleteScheduledTransactionUseCase } = serverContainer();
-    await deleteScheduledTransactionUseCase.execute(result.data.id);
+    await deleteScheduledTransactionUseCase.execute(appUser.id, result.data.id);
     revalidatePath("/transactions");
     return { status: "success", message: "Plan eliminado" };
   } catch (error) {

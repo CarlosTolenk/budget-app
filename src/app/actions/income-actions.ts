@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { serverContainer } from "@/infrastructure/config/server-container";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { ActionState } from "./action-state";
 
 const createSchema = z.object({
@@ -23,8 +24,9 @@ export async function createIncomeAction(_prevState: ActionState, formData: Form
   }
 
   try {
+    const { appUser } = await requireAuth();
     const { createIncomeUseCase } = serverContainer();
-    await createIncomeUseCase.execute(result.data);
+    await createIncomeUseCase.execute({ userId: appUser.id, ...result.data });
     revalidatePath("/budget");
     revalidatePath("/");
     return { status: "success", message: "Ingreso registrado" };
@@ -52,8 +54,9 @@ export async function updateIncomeAction(_prevState: ActionState, formData: Form
   }
 
   try {
+    const { appUser } = await requireAuth();
     const { updateIncomeUseCase } = serverContainer();
-    await updateIncomeUseCase.execute(result.data);
+    await updateIncomeUseCase.execute({ userId: appUser.id, ...result.data });
     revalidatePath("/budget");
     revalidatePath("/");
     return { status: "success", message: "Ingreso actualizado" };
@@ -77,8 +80,9 @@ export async function deleteIncomeAction(_prevState: ActionState, formData: Form
   }
 
   try {
+    const { appUser } = await requireAuth();
     const { deleteIncomeUseCase } = serverContainer();
-    await deleteIncomeUseCase.execute(result.data.id);
+    await deleteIncomeUseCase.execute(appUser.id, result.data.id);
     revalidatePath("/budget");
     revalidatePath("/");
     return { status: "success", message: "Ingreso eliminado" };

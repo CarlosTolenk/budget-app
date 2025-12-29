@@ -18,6 +18,7 @@ export class RunScheduledTransactionsUseCase {
     for (const item of dueItems) {
       const normalizedAmount = item.amount < 0 ? item.amount : -Math.abs(item.amount);
       const payload: CreateTransactionInput = {
+        userId: item.userId,
         date: item.nextRunDate,
         amount: normalizedAmount,
         bucket: item.bucket,
@@ -33,9 +34,9 @@ export class RunScheduledTransactionsUseCase {
       const nextRun = addMonths(item.nextRunDate, 1);
       const shouldDeactivate = item.endDate && nextRun > item.endDate;
       if (shouldDeactivate) {
-        await this.scheduledTransactionRepository.deactivate(item.id);
+        await this.scheduledTransactionRepository.deactivate(item.id, item.userId);
       } else {
-        await this.scheduledTransactionRepository.updateNextRun(item.id, nextRun);
+        await this.scheduledTransactionRepository.updateNextRun(item.id, item.userId, nextRun);
       }
     }
 

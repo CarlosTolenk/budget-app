@@ -5,8 +5,8 @@ import { IncomeRepository } from "@/domain/repositories";
 export class ListIncomesUseCase {
   constructor(private readonly incomeRepository: IncomeRepository) {}
 
-  async execute(monthId?: string): Promise<Income[]> {
+  async execute(userId: string, monthId?: string): Promise<Income[]> {
     const resolved = monthId ?? format(new Date(), "yyyy-MM");
-    return this.incomeRepository.listByMonth(resolved);
+    return this.incomeRepository.listByMonth(resolved, userId);
   }
 }

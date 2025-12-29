@@ -9,17 +9,23 @@ function sanitize(value: number): number {
 export class MemoryCategoryRepository implements CategoryRepository {
   private categories = memoryCategories;
 
-  async listAll(): Promise<Category[]> {
-    return this.categories;
+  async listAll(userId: string): Promise<Category[]> {
+    return this.categories.filter((category) => category.userId === userId);
   }
 
-  async findById(id: string): Promise<Category | null> {
-    return this.categories.find((category) => category.id === id) ?? null;
+  async findById(id: string, userId: string): Promise<Category | null> {
+    return this.categories.find((category) => category.id === id && category.userId === userId) ?? null;
   }
 
-  async create(input: { name: string; bucket: Category["bucket"]; idealMonthlyAmount: number }): Promise<Category> {
+  async create(input: {
+    userId: string;
+    name: string;
+    bucket: Category["bucket"];
+    idealMonthlyAmount: number;
+  }): Promise<Category> {
     const category: Category = {
       id: `cat-${Math.random().toString(36).slice(2)}`,
+      userId: input.userId,
       name: input.name,
       bucket: input.bucket,
       idealMonthlyAmount: sanitize(input.idealMonthlyAmount),
@@ -31,8 +37,14 @@ export class MemoryCategoryRepository implements CategoryRepository {
     return category;
   }
 
-  async update(input: { id: string; name: string; bucket: Category["bucket"]; idealMonthlyAmount: number }): Promise<Category> {
-    const index = this.categories.findIndex((category) => category.id === input.id);
+  async update(input: {
+    id: string;
+    userId: string;
+    name: string;
+    bucket: Category["bucket"];
+    idealMonthlyAmount: number;
+  }): Promise<Category> {
+    const index = this.categories.findIndex((category) => category.id === input.id && category.userId === input.userId);
     if (index === -1) {
       throw new Error("Categoría no encontrada");
     }

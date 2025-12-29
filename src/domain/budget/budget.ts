@@ -8,6 +8,7 @@ export interface BudgetTargets {
 
 export interface Budget extends BudgetTargets {
   id: string;
+  userId: string;
   month: string; // YYYY-MM
   income: number;
   createdAt: Date;

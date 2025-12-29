@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { serverContainer } from "@/infrastructure/config/server-container";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { ActionState } from "./action-state";
 
 const schema = z.object({
@@ -31,11 +32,12 @@ export async function updateTransactionAction(_prev: ActionState, formData: Form
   }
 
   try {
+    const { appUser } = await requireAuth();
     const { updateTransactionUseCase, listCategoriesUseCase } = serverContainer();
     const { id, ...data } = result.data;
 
     if (data.categoryId) {
-      const categories = await listCategoriesUseCase.execute();
+      const categories = await listCategoriesUseCase.execute(appUser.id);
       const category = categories.find((category) => category.id === data.categoryId);
       if (!category) {
         return { status: "error", message: "Categoría no encontrada" };
@@ -51,6 +53,7 @@ export async function updateTransactionAction(_prev: ActionState, formData: Form
       amount !== undefined ? (amount < 0 ? amount : -Math.abs(amount)) : undefined;
 
     await updateTransactionUseCase.execute({
+      userId: appUser.id,
       id,
       ...rest,
       ...(normalizedAmount !== undefined ? { amount: normalizedAmount } : {}),

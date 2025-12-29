@@ -5,10 +5,11 @@ import { CreateTransactionInput, Transaction } from "@/domain/transactions/trans
 import { prisma } from "@/infrastructure/db/prisma-client";
 
 export class PrismaTransactionRepository implements TransactionRepository {
-  async findByMonth(monthId: string): Promise<Transaction[]> {
+  async findByMonth(monthId: string, userId: string): Promise<Transaction[]> {
     const monthDate = parseISO(`${monthId}-01`);
     const records = await prisma.transaction.findMany({
       where: {
+        userId,
         date: {
           gte: startOfMonth(monthDate),
           lte: endOfMonth(monthDate),
@@ -20,8 +21,9 @@ export class PrismaTransactionRepository implements TransactionRepository {
     return records.map(this.mapTransaction);
   }
 
-  async findRecent(limit: number): Promise<Transaction[]> {
+  async findRecent(limit: number, userId: string): Promise<Transaction[]> {
     const records = await prisma.transaction.findMany({
+      where: { userId },
       orderBy: { date: "desc" },
       take: limit,
     });
@@ -29,8 +31,8 @@ export class PrismaTransactionRepository implements TransactionRepository {
     return records.map(this.mapTransaction);
   }
 
-  async findByEmailMessageId(emailMessageId: string): Promise<Transaction | null> {
-    const record = await prisma.transaction.findUnique({ where: { emailMessageId } });
+  async findByEmailMessageId(emailMessageId: string, userId: string): Promise<Transaction | null> {
+    const record = await prisma.transaction.findFirst({ where: { emailMessageId, userId } });
     return record ? this.mapTransaction(record) : null;
   }
 
@@ -57,7 +59,11 @@ export class PrismaTransactionRepository implements TransactionRepository {
     return this.mapTransaction(record);
   }
 
-  async update(id: string, data: Partial<CreateTransactionInput>): Promise<Transaction> {
+  async update(id: string, userId: string, data: Partial<CreateTransactionInput>): Promise<Transaction> {
+    const existing = await prisma.transaction.findFirst({ where: { id, userId } });
+    if (!existing) {
+      throw new Error("Transaction not found");
+    }
     const record = await prisma.transaction.update({
       where: { id },
       data: {
@@ -73,13 +79,14 @@ export class PrismaTransactionRepository implements TransactionRepository {
     return this.mapTransaction(record);
   }
 
-  async delete(id: string): Promise<void> {
-    await prisma.transaction.delete({ where: { id } });
+  async delete(id: string, userId: string): Promise<void> {
+    await prisma.transaction.deleteMany({ where: { id, userId } });
   }
 
   private mapTransaction(record: PrismaTransaction): Transaction {
     return {
       id: record.id,
+      userId: record.userId,
       amount: Number(record.amount),
       bucket: record.bucket,
       categoryId: record.categoryId,

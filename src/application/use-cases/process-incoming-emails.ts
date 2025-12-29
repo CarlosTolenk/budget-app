@@ -3,7 +3,7 @@ import { EmailIngestionService } from "@/modules/email-ingestion/services/email-
 export class ProcessIncomingEmailsUseCase {
   constructor(private readonly emailIngestionService: EmailIngestionService) {}
 
-  async execute() {
-    return this.emailIngestionService.run();
+  async execute(userId: string) {
+    return this.emailIngestionService.run(userId);
   }
 }

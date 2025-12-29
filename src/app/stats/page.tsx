@@ -20,7 +20,8 @@ export const dynamic = "force-dynamic";
 
 export default async function StatsPage({ searchParams }: StatsPageProps) {
   noStore();
-  await requireAuth();
+  const { appUser } = await requireAuth();
+  const userId = appUser.id;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const fromMonth = typeof resolvedSearchParams?.from === "string" ? resolvedSearchParams.from : undefined;
   const toMonth = typeof resolvedSearchParams?.to === "string" ? resolvedSearchParams.to : undefined;
@@ -31,6 +32,7 @@ export default async function StatsPage({ searchParams }: StatsPageProps) {
 
   const container = serverContainer();
   const stats = await container.getFinancialStatsUseCase.execute({
+    userId,
     fromMonth,
     toMonth,
     topLimit: limit,

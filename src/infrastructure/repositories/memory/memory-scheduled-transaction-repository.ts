@@ -5,13 +5,16 @@ import { memoryScheduledTransactions } from "./memory-data";
 export class MemoryScheduledTransactionRepository implements ScheduledTransactionRepository {
   private data = [...memoryScheduledTransactions];
 
-  async listAll(): Promise<ScheduledTransaction[]> {
-    return [...this.data].sort((a, b) => a.nextRunDate.getTime() - b.nextRunDate.getTime());
+  async listAll(userId: string): Promise<ScheduledTransaction[]> {
+    return this.data
+      .filter((item) => item.userId === userId)
+      .sort((a, b) => a.nextRunDate.getTime() - b.nextRunDate.getTime());
   }
 
   async create(input: CreateScheduledTransactionInput): Promise<ScheduledTransaction> {
     const record: ScheduledTransaction = {
       id: `sched-${Math.random().toString(36).slice(2)}`,
+      userId: input.userId,
       name: input.name,
       amount: input.amount,
       currency: input.currency,
@@ -30,16 +33,16 @@ export class MemoryScheduledTransactionRepository implements ScheduledTransactio
     return record;
   }
 
-  async delete(id: string): Promise<void> {
-    this.data = this.data.filter((item) => item.id !== id);
+  async delete(id: string, userId: string): Promise<void> {
+    this.data = this.data.filter((item) => !(item.id === id && item.userId === userId));
   }
 
-  async updateNextRun(id: string, nextRunDate: Date): Promise<void> {
-    this.data = this.data.map((item) => (item.id === id ? { ...item, nextRunDate } : item));
+  async updateNextRun(id: string, userId: string, nextRunDate: Date): Promise<void> {
+    this.data = this.data.map((item) => (item.id === id && item.userId === userId ? { ...item, nextRunDate } : item));
   }
 
-  async deactivate(id: string): Promise<void> {
-    this.data = this.data.map((item) => (item.id === id ? { ...item, active: false } : item));
+  async deactivate(id: string, userId: string): Promise<void> {
+    this.data = this.data.map((item) => (item.id === id && item.userId === userId ? { ...item, active: false } : item));
   }
 
   async findDue(date: Date): Promise<ScheduledTransaction[]> {

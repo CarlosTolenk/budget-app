@@ -8,9 +8,11 @@ import { TransactionDraft } from "@/domain/transaction-drafts/transaction-draft"
 
 const now = new Date();
 const monthId = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+export const memoryUserId = "memory-user";
 
 export const memoryBudget: Budget = {
   id: "budget-1",
+  userId: memoryUserId,
   month: monthId,
   income: 5200,
   needsTarget: 2600,
@@ -21,15 +23,48 @@ export const memoryBudget: Budget = {
 };
 
 export const memoryCategories: Category[] = [
-  { id: "cat-groceries", name: "Groceries", bucket: "NEEDS", idealMonthlyAmount: 400, createdAt: now, updatedAt: now },
-  { id: "cat-rent", name: "Rent", bucket: "NEEDS", idealMonthlyAmount: 1600, createdAt: now, updatedAt: now },
-  { id: "cat-fun", name: "Fun", bucket: "WANTS", idealMonthlyAmount: 200, createdAt: now, updatedAt: now },
-  { id: "cat-savings", name: "Emergency Fund", bucket: "SAVINGS", idealMonthlyAmount: 500, createdAt: now, updatedAt: now },
+  {
+    id: "cat-groceries",
+    userId: memoryUserId,
+    name: "Groceries",
+    bucket: "NEEDS",
+    idealMonthlyAmount: 400,
+    createdAt: now,
+    updatedAt: now,
+  },
+  {
+    id: "cat-rent",
+    userId: memoryUserId,
+    name: "Rent",
+    bucket: "NEEDS",
+    idealMonthlyAmount: 1600,
+    createdAt: now,
+    updatedAt: now,
+  },
+  {
+    id: "cat-fun",
+    userId: memoryUserId,
+    name: "Fun",
+    bucket: "WANTS",
+    idealMonthlyAmount: 200,
+    createdAt: now,
+    updatedAt: now,
+  },
+  {
+    id: "cat-savings",
+    userId: memoryUserId,
+    name: "Emergency Fund",
+    bucket: "SAVINGS",
+    idealMonthlyAmount: 500,
+    createdAt: now,
+    updatedAt: now,
+  },
 ];
 
 export const memoryIncomes: Income[] = [
   {
     id: "income-1",
+    userId: memoryUserId,
     month: monthId,
     name: "Salario",
     amount: 4000,
@@ -38,6 +73,7 @@ export const memoryIncomes: Income[] = [
   },
   {
     id: "income-2",
+    userId: memoryUserId,
     month: monthId,
     name: "Freelance",
     amount: 1200,
@@ -47,12 +83,21 @@ export const memoryIncomes: Income[] = [
 ];
 
 export const memoryRules: Rule[] = [
-  { id: "rule1", pattern: "supermarket", priority: 10, categoryId: "cat-groceries", createdAt: now, updatedAt: now },
+  {
+    id: "rule1",
+    userId: memoryUserId,
+    pattern: "supermarket",
+    priority: 10,
+    categoryId: "cat-groceries",
+    createdAt: now,
+    updatedAt: now,
+  },
 ];
 
 export const memoryTransactions: Transaction[] = [
   {
     id: "txn-1",
+    userId: memoryUserId,
     amount: -120.45,
     bucket: "NEEDS",
     categoryId: "cat-groceries",
@@ -67,6 +112,7 @@ export const memoryTransactions: Transaction[] = [
   },
   {
     id: "txn-2",
+    userId: memoryUserId,
     amount: -80,
     bucket: "WANTS",
     categoryId: "cat-fun",
@@ -81,6 +127,7 @@ export const memoryTransactions: Transaction[] = [
   },
   {
     id: "txn-3",
+    userId: memoryUserId,
     amount: -1600,
     bucket: "NEEDS",
     categoryId: "cat-rent",
@@ -98,6 +145,7 @@ export const memoryTransactions: Transaction[] = [
 export const memoryScheduledTransactions: ScheduledTransaction[] = [
   {
     id: "sched-1",
+    userId: memoryUserId,
     name: "Rent",
     amount: -1600,
     currency: "DOP",
@@ -115,3 +163,12 @@ export const memoryScheduledTransactions: ScheduledTransaction[] = [
 ];
 
 export const memoryDrafts: TransactionDraft[] = [];
+export const memoryUsers = [
+  {
+    id: memoryUserId,
+    supabaseUserId: null,
+    email: "memory@example.com",
+    createdAt: now,
+    updatedAt: now,
+  },
+];

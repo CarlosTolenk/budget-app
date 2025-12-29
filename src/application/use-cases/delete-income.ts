@@ -7,14 +7,14 @@ export class DeleteIncomeUseCase {
     private readonly budgetRepository: BudgetRepository,
   ) {}
 
-  async execute(id: string): Promise<void> {
-    const deleted = await this.incomeRepository.delete(id);
+  async execute(userId: string, id: string): Promise<void> {
+    const deleted = await this.incomeRepository.delete(id, userId);
     if (!deleted) {
       throw new Error("Ingreso no encontrado");
     }
 
-    const total = await this.incomeRepository.getTotalForMonth(deleted.month);
+    const total = await this.incomeRepository.getTotalForMonth(deleted.month, userId);
     const upsertBudget = new UpsertBudgetUseCase(this.budgetRepository);
-    await upsertBudget.execute({ month: deleted.month, income: total });
+    await upsertBudget.execute({ userId, month: deleted.month, income: total });
   }
 }
