@@ -32,9 +32,10 @@ export default function RootLayout({
         <div className="min-h-screen bg-slate-950 text-white">
           <GlobalLoadingBar />
           <header className="border-b border-white/10 bg-slate-950/90 backdrop-blur">
-            <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-4 md:flex-row md:items-center md:justify-between">
+            <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-4">
               <Link href="/" className="text-lg font-semibold tracking-tight text-white">
-                Presupuesto 50/30/20
+                <span className="md:hidden">Presupuesto</span>
+                <span className="hidden md:inline">Presupuesto 50/30/20</span>
               </Link>
               <HeaderActions />
             </div>
