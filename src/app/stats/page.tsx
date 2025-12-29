@@ -4,7 +4,7 @@ import clsx from "clsx";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { serverContainer } from "@/infrastructure/config/server-container";
 import { formatCurrency } from "@/lib/format";
-import { bucketCopy } from "@/domain/value-objects/bucket";
+import { TopCategorySpending } from "@/components/stats/top-category-spending";
 
 type StatsSearchParams = {
   from?: string;
@@ -38,7 +38,6 @@ export default async function StatsPage({ searchParams }: StatsPageProps) {
   const topLimitValue = limit ?? (stats.topSpendingCategories.length || 5);
 
   const readableRange = `${format(parseISO(`${stats.period.from}-01`), "MMMM yyyy")} → ${format(parseISO(`${stats.period.to}-01`), "MMMM yyyy")}`;
-  const maxCategoryTotal = Math.max(...stats.topSpendingCategories.map((item) => item.total), 1);
 
   return (
     <div className="flex flex-col gap-8">
@@ -123,44 +122,6 @@ export default async function StatsPage({ searchParams }: StatsPageProps) {
 
       <section className="grid gap-4 md:grid-cols-2">
         <article className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold">Categorías con más gasto</h2>
-              <p className="text-sm text-slate-300">Analiza dónde se concentra tu presupuesto.</p>
-            </div>
-            <span className="rounded-full bg-white/10 px-3 py-1 text-xs uppercase tracking-wide text-slate-200">
-              {stats.topSpendingCategories.length} categorías
-            </span>
-          </div>
-          {stats.topSpendingCategories.length === 0 ? (
-            <p className="mt-6 text-sm text-slate-400">Aún no hay gastos registrados en el periodo seleccionado.</p>
-          ) : (
-            <ul className="mt-6 space-y-4">
-              {stats.topSpendingCategories.map((category) => {
-                const bucket = category.bucket ? bucketCopy[category.bucket] : undefined;
-                const width = (category.total / maxCategoryTotal) * 100;
-                return (
-                  <li key={category.id}>
-                    <div className="flex items-center justify-between text-sm">
-                      <div>
-                        <p className="font-semibold">{category.name}</p>
-                        {bucket && (
-                          <span className="text-[11px] uppercase tracking-wide text-slate-400">{bucket.label}</span>
-                        )}
-                      </div>
-                      <p className="text-sm text-white">{formatCurrency(category.total)}</p>
-                    </div>
-                    <div className="mt-2 h-3 rounded-full bg-white/10">
-                      <div className="h-3 rounded-full bg-rose-400/80" style={{ width: `${Math.min(width, 100)}%` }} />
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </article>
-
-        <article className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
           <h2 className="text-xl font-semibold">Mes con más ingresos</h2>
           <p className="text-sm text-slate-300">Descubre cuándo alcanzaste el mayor flujo positivo.</p>
           {stats.highestIncomeMonth ? (
@@ -180,7 +141,30 @@ export default async function StatsPage({ searchParams }: StatsPageProps) {
             Usa esta referencia para alinear tus metas de ahorro o evaluar bonificaciones y otros ingresos variables.
           </p>
         </article>
+
+        <article className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
+          <h2 className="text-xl font-semibold">Mes con más gastos</h2>
+          <p className="text-sm text-slate-300">Identifica cuándo tuviste la mayor presión de egresos.</p>
+          {stats.highestExpenseMonth ? (
+            <div className="mt-6 rounded-2xl border border-rose-400/30 bg-rose-400/5 p-5">
+              <p className="text-sm uppercase tracking-wide text-rose-200">
+                {format(parseISO(`${stats.highestExpenseMonth.month}-01`), "MMMM yyyy")}
+              </p>
+              <p className="mt-2 text-3xl font-semibold text-rose-200">
+                {formatCurrency(stats.highestExpenseMonth.expenses)}
+              </p>
+              <p className="text-sm text-rose-100/70">Total de gastos registrados en ese mes.</p>
+            </div>
+          ) : (
+            <p className="mt-6 text-sm text-slate-400">Aún no hay gastos capturados en el periodo.</p>
+          )}
+          <p className="mt-6 text-sm text-slate-300">
+            Usa este dato para detectar temporadas de mayor consumo y anticipar presupuestos.
+          </p>
+        </article>
       </section>
+
+      <TopCategorySpending categories={stats.topSpendingCategories} />
 
       <section className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
         <div className="flex items-center justify-between">

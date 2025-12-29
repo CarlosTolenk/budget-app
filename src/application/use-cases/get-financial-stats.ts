@@ -16,11 +16,17 @@ interface MonthlyStat {
   transactions: number;
 }
 
+interface CategoryMonthlyTotal {
+  month: string;
+  total: number;
+}
+
 interface CategoryStat {
   id: string;
   name: string;
   bucket?: Bucket;
   total: number;
+  monthlyTotals: CategoryMonthlyTotal[];
 }
 
 interface FinancialStatsResult {
@@ -29,6 +35,7 @@ interface FinancialStatsResult {
   months: MonthlyStat[];
   topSpendingCategories: CategoryStat[];
   highestIncomeMonth?: { month: string; income: number };
+  highestExpenseMonth?: { month: string; expenses: number };
 }
 
 const MONTH_REGEX = /^\d{4}-\d{2}$/;
@@ -53,6 +60,7 @@ export class GetFinancialStatsUseCase {
     const categories = await this.categoryRepository.listAll();
     const categoryMap = new Map(categories.map((category) => [category.id, category]));
     const categoryTotals = new Map<string, number>();
+    const categoryMonthlyTotals = new Map<string, Map<string, number>>();
     const monthlyStats: MonthlyStat[] = [];
 
     for (const monthId of monthIds) {
@@ -70,7 +78,15 @@ export class GetFinancialStatsUseCase {
           return;
         }
         const key = transaction.categoryId ?? "uncategorized";
-        categoryTotals.set(key, (categoryTotals.get(key) ?? 0) + Math.abs(transaction.amount));
+        const absoluteAmount = Math.abs(transaction.amount);
+        categoryTotals.set(key, (categoryTotals.get(key) ?? 0) + absoluteAmount);
+
+        let monthTotals = categoryMonthlyTotals.get(key);
+        if (!monthTotals) {
+          monthTotals = new Map<string, number>();
+          categoryMonthlyTotals.set(key, monthTotals);
+        }
+        monthTotals.set(monthId, (monthTotals.get(monthId) ?? 0) + absoluteAmount);
       });
 
       monthlyStats.push({
@@ -85,11 +101,16 @@ export class GetFinancialStatsUseCase {
     const topSpendingCategories = Array.from(categoryTotals.entries())
       .map(([categoryId, total]): CategoryStat => {
         const category = categoryMap.get(categoryId);
+        const monthTotals = categoryMonthlyTotals.get(categoryId) ?? new Map<string, number>();
         return {
           id: categoryId,
           name: category?.name ?? "Sin categoría",
           bucket: category?.bucket,
           total,
+          monthlyTotals: monthIds.map((month) => ({
+            month,
+            total: monthTotals.get(month) ?? 0,
+          })),
         };
       })
       .sort((a, b) => b.total - a.total)
@@ -106,8 +127,15 @@ export class GetFinancialStatsUseCase {
     );
 
     const highestIncomeMonth = monthlyStats.reduce<{ month: string; income: number } | undefined>((best, current) => {
-      if (!best || current.income > best.income) {
+      if (!best || current.income > (best?.income ?? 0)) {
         return { month: current.month, income: current.income };
+      }
+      return best;
+    }, undefined);
+
+    const highestExpenseMonth = monthlyStats.reduce<{ month: string; expenses: number } | undefined>((best, current) => {
+      if (!best || current.expenses > (best?.expenses ?? 0)) {
+        return { month: current.month, expenses: current.expenses };
       }
       return best;
     }, undefined);
@@ -118,6 +146,7 @@ export class GetFinancialStatsUseCase {
       months: monthlyStats,
       topSpendingCategories,
       highestIncomeMonth,
+      highestExpenseMonth,
     };
   }
 
