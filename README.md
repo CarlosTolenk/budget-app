@@ -109,9 +109,9 @@ src/
 5. Opcional: persistir el `historyId` de Gmail para hacer fetch incremental en vez de full sync.
 
 ## Obtener un refresh_token de Gmail (scripts locales)
-1. Duplica `.env.example` en `.env` y completa `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` y `GOOGLE_REDIRECT_URI` con los datos del OAuth Client ID creado en Google Cloud Console (la URI debe ser `http://localhost:3000/oauth2callback`). Habilita la Gmail API y configura el OAuth Consent Screen antes de continuar.
+1. Duplica `.env.example` en `.env` y completa `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` y `GOOGLE_REDIRECT_URI` con los datos del OAuth Client ID creado en Google Cloud Console (la URI debe incluir `http://localhost:3000/api/oauth/google/callback` para desarrollo y la versión HTTPS en producción). Habilita la Gmail API y configura el OAuth Consent Screen antes de continuar.
 2. Instala dependencias (`npm install`) y ejecuta `npm run auth:gmail`. Este script levanta un servidor Express en `http://localhost:3000` (asegúrate de que Next.js esté apagado) y genera la URL de consentimiento con `access_type=offline`, `prompt=consent` y el scope mínimo `https://www.googleapis.com/auth/gmail.readonly`.
-3. Abre la URL mostrada en consola, inicia sesión en la cuenta que leerá los correos bancarios y acepta los permisos. Google redirigirá a `/oauth2callback`, el script intercambiará el `code` con `OAuth2Client.getToken`, mostrará los tokens y guardará automáticamente `GOOGLE_REFRESH_TOKEN` **y** `GMAIL_REFRESH_TOKEN` en `.env`.
+3. Abre la URL mostrada en consola, inicia sesión en la cuenta que leerá los correos bancarios y acepta los permisos. Google redirigirá a `/api/oauth/google/callback`, el script intercambiará el `code` con `OAuth2Client.getToken`, mostrará los tokens y guardará automáticamente `GOOGLE_REFRESH_TOKEN` **y** `GMAIL_REFRESH_TOKEN` en `.env`.
 4. Si no aparece `refresh_token`, revoca el acceso desde [Google Account → Security → Third-party access](https://myaccount.google.com/permissions) y vuelve a ejecutar `npm run auth:gmail`. También sucede si no se usan los parámetros mencionados anteriormente.
 5. Para comprobar que todo funciona, ejecuta `npm run gmail:inbox`, el cual usa `gmail.users.messages.list` para traer los últimos 5 correos de la bandeja de entrada y muestra `Subject/From/Date` (usa el `refresh_token` guardado).
 6. Los correos se leen directamente desde la bandeja de entrada. Asegúrate de tener reglas/adaptadores que identifiquen los formatos válidos; el resto se omite automáticamente durante la ingesta.
@@ -127,6 +127,11 @@ src/
 - El middleware (`middleware.ts`) utiliza `createMiddlewareClient` para hidratar la sesión en cada request y redirigir automáticamente a `/login` cuando no exista.
 - `requireAuth` se apoya en Supabase para todas las páginas server-side (`app/page.tsx`, `/budget`, `/stats`, `/transactions`, etc.).
 - El botón “Cerrar sesión” ejecuta `supabase.auth.signOut()` vía server action. Las cookies `sb-...` se regeneran automáticamente.
+
+## Conexión de Gmail por usuario
+- Cada usuario puede vincular su bandeja desde la pestaña “Borradores automáticos” en `/transactions` (botón **Conectar Gmail**). Esto dispara `/api/oauth/google/start`, abre el consentimiento de Google y, tras aceptar, ` /api/oauth/google/callback` persiste el `refresh_token` en la tabla `GmailCredential`.
+- Los tokens se almacenan por `userId`, por lo que la ingesta (`ProcessIncomingEmailsUseCase`) crea borradores usando el refresh token de cada usuario. Si no existe credencial, las acciones que intenten importar devolverán `No hay una conexión de Gmail configurada`.
+- Para entornos donde quieras seguir usando un único Gmail global, deja configurado `GMAIL_CLIENT_ID/GMAIL_CLIENT_SECRET/GMAIL_REFRESH_TOKEN`; ese valor actúa como fallback mientras los usuarios completan su propio OAuth.
 
 ## UI actual (MVP)
 - **Dashboard (`/`):** resumen anual/mes corrido, buckets 50/30/20, gráfica con ingresos/gastos de los últimos 6 meses (con montos visibles por mes), selector de mes (inputs + prev/next), últimos movimientos y reglas activas.

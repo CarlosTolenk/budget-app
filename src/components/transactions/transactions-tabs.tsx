@@ -28,6 +28,7 @@ interface TransactionsTabsProps {
   scheduled: ScheduledTransaction[];
   drafts: TransactionDraft[];
   categories: Category[];
+  gmailConnectUrl: string;
 }
 
 const tabs = [
@@ -38,7 +39,7 @@ const tabs = [
 
 type TabId = (typeof tabs)[number]["id"];
 
-export function TransactionsTabs({ manual, scheduled, drafts, categories }: TransactionsTabsProps) {
+export function TransactionsTabs({ manual, scheduled, drafts, categories, gmailConnectUrl }: TransactionsTabsProps) {
   const [active, setActive] = useState<TabId>("manual");
 
   return (
@@ -61,7 +62,7 @@ export function TransactionsTabs({ manual, scheduled, drafts, categories }: Tran
 
       {active === "manual" && <ManualPanel manual={manual} categories={categories} />}
       {active === "scheduled" && <ScheduledPanel scheduled={scheduled} categories={categories} />}
-      {active === "drafts" && <DraftsPanel drafts={drafts} categories={categories} />}
+      {active === "drafts" && <DraftsPanel drafts={drafts} categories={categories} gmailConnectUrl={gmailConnectUrl} />}
     </div>
   );
 }
@@ -135,7 +136,7 @@ function ScheduledPanel({ scheduled, categories }: { scheduled: ScheduledTransac
   );
 }
 
-function DraftsPanel({ drafts, categories }: { drafts: TransactionDraft[]; categories: Category[] }) {
+function DraftsPanel({ drafts, categories, gmailConnectUrl }: { drafts: TransactionDraft[]; categories: Category[]; gmailConnectUrl: string }) {
   const router = useRouter();
   const [importState, setImportState] = useState<{
     status: "idle" | "success" | "error";
@@ -165,18 +166,29 @@ function DraftsPanel({ drafts, categories }: { drafts: TransactionDraft[]; categ
             Ejecuta la ingesta manualmente si el cron aún no se ha disparado. Usa esto solo cuando necesites forzar la actualización.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={handleManualImport}
-          disabled={isPending}
-          className={clsx(
-            "rounded-full px-5 py-2 text-sm font-semibold transition",
-            isPending ? "bg-white/30 text-slate-300" : "bg-white text-slate-900 hover:bg-slate-100",
-          )}
-        >
-          {isPending ? "Sincronizando..." : "Obtener correos"}
-        </button>
+        <div className="flex flex-col gap-2 md:flex-row">
+          <button
+            type="button"
+            onClick={handleManualImport}
+            disabled={isPending}
+            className={clsx(
+              "rounded-full px-5 py-2 text-sm font-semibold transition",
+              isPending ? "bg-white/30 text-slate-300" : "bg-white text-slate-900 hover:bg-slate-100",
+            )}
+          >
+            {isPending ? "Sincronizando..." : "Obtener correos"}
+          </button>
+          <a
+            href={gmailConnectUrl}
+            className="rounded-full border border-white/30 px-5 py-2 text-center text-sm font-semibold text-white transition hover:border-white/60"
+          >
+            Conectar Gmail
+          </a>
+        </div>
       </div>
+      <p className="text-[11px] text-slate-400">
+        Conecta tu cuenta de Gmail para que los correos con notificaciones bancarias se conviertan en borradores automáticos.
+      </p>
       {importState.message ? (
         <div className="space-y-1 rounded-xl border border-white/5 bg-slate-900/20 p-3">
           <p

@@ -6,3 +6,4 @@ export * from "./income-repository";
 export * from "./scheduled-transaction-repository";
 export * from "./transaction-draft-repository";
 export * from "./user-repository";
+export * from "./gmail-credential-repository";

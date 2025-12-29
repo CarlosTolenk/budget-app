@@ -37,6 +37,7 @@ model User {
   budgets         Budget[]
   rules           Rule[]
   incomes         Income[]
+  gmailCredential GmailCredential?
 
   @@index([supabaseUserId])
 }
@@ -167,5 +168,18 @@ model Income {
   updatedAt DateTime @updatedAt
 
   @@index([month])
+  @@index([userId])
+}
+
+model GmailCredential {
+  id           String   @id @default(cuid())
+  user         User     @relation(fields: [userId], references: [id])
+  userId       String   @unique
+  refreshToken String
+  labelFilter  String?
+  historyId    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
   @@index([userId])
 }

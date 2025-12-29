@@ -11,12 +11,17 @@ export async function GET() {
     let imported = 0;
     let skipped = 0;
     const errors: { messageId: string; reason: EmailIngestionSkipReason; subject?: string }[] = [];
+    const failedUsers: { userId: string; reason: string }[] = [];
 
     for (const user of users) {
-      const result = await processIncomingEmailsUseCase.execute(user.id);
-      imported += result.imported;
-      skipped += result.skipped;
-      errors.push(...result.errors);
+      try {
+        const result = await processIncomingEmailsUseCase.execute(user.id);
+        imported += result.imported;
+        skipped += result.skipped;
+        errors.push(...result.errors);
+      } catch (error) {
+        failedUsers.push({ userId: user.id, reason: (error as Error).message });
+      }
     }
 
     return NextResponse.json({
@@ -24,6 +29,7 @@ export async function GET() {
       imported,
       skipped,
       errors,
+      failedUsers,
     });
   } catch (error) {
     console.error("cron/import-emails", error);

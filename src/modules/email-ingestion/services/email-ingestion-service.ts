@@ -1,4 +1,9 @@
-import { CategoryRepository, RuleRepository, TransactionRepository, TransactionDraftRepository } from "@/domain/repositories";
+import {
+  CategoryRepository,
+  RuleRepository,
+  TransactionRepository,
+  TransactionDraftRepository,
+} from "@/domain/repositories";
 import { CreateDraftInput } from "@/domain/transaction-drafts/transaction-draft";
 import { EmailProvider } from "../providers/email-provider";
 import { BankAdapter } from "../adapters/bank-adapter";
@@ -18,7 +23,6 @@ export type EmailIngestionSkipReason =
 
 export class EmailIngestionService {
   constructor(
-    private readonly provider: EmailProvider,
     private readonly adapters: BankAdapter[],
     private readonly transactionRepository: TransactionRepository,
     private readonly draftRepository: TransactionDraftRepository,
@@ -26,9 +30,9 @@ export class EmailIngestionService {
     private readonly ruleRepository: RuleRepository,
   ) {}
 
-  async run(userId: string): Promise<EmailIngestionResult> {
+  async run(userId: string, provider: EmailProvider): Promise<EmailIngestionResult> {
     const [messages, categories, rules] = await Promise.all([
-      this.provider.listMessages(),
+      provider.listMessages(),
       this.categoryRepository.listAll(userId),
       this.ruleRepository.listAll(userId),
     ]);

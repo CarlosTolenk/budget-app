@@ -32,6 +32,7 @@ import { AsociacionCibaoAdapter } from "@/modules/email-ingestion/adapters/asoci
 import { QikAdapter } from "@/modules/email-ingestion/adapters/qik-adapter";
 import { EmailIngestionService } from "@/modules/email-ingestion/services/email-ingestion-service";
 import { MockEmailProvider } from "@/modules/email-ingestion/mocks/mock-provider";
+import { EmailProviderResolver } from "@/modules/email-ingestion/services/email-provider-resolver";
 import { env } from "@/infrastructure/config/env";
 import { PrismaIncomeRepository } from "@/infrastructure/repositories/prisma/prisma-income-repository";
 import { PrismaScheduledTransactionRepository } from "@/infrastructure/repositories/prisma/prisma-scheduled-transaction-repository";
@@ -48,6 +49,9 @@ import { DeleteScheduledTransactionUseCase } from "@/application/use-cases/delet
 import { UserRepository } from "@/domain/repositories/user-repository";
 import { PrismaUserRepository } from "@/infrastructure/repositories/prisma/prisma-user-repository";
 import { MemoryUserRepository } from "@/infrastructure/repositories/memory/memory-user-repository";
+import { GmailCredentialRepository } from "@/domain/repositories";
+import { PrismaGmailCredentialRepository } from "@/infrastructure/repositories/prisma/prisma-gmail-credential-repository";
+import { MemoryGmailCredentialRepository } from "@/infrastructure/repositories/memory/memory-gmail-credential-repository";
 
 interface ServerContainer {
   getDashboardSummaryUseCase: GetDashboardSummaryUseCase;
@@ -76,6 +80,7 @@ interface ServerContainer {
   deleteTransactionDraftUseCase: DeleteTransactionDraftUseCase;
   deleteScheduledTransactionUseCase: DeleteScheduledTransactionUseCase;
   userRepository: UserRepository;
+  gmailCredentialRepository: GmailCredentialRepository;
 }
 
 let cachedContainer: ServerContainer | null = null;
@@ -97,10 +102,10 @@ export function serverContainer(): ServerContainer {
     : new MemoryScheduledTransactionRepository();
   const draftRepository = hasDatabase ? new PrismaTransactionDraftRepository() : new MemoryTransactionDraftRepository();
   const userRepository = hasDatabase ? new PrismaUserRepository() : new MemoryUserRepository();
+  const gmailCredentialRepository = hasDatabase ? new PrismaGmailCredentialRepository() : new MemoryGmailCredentialRepository();
 
-  const hasGmailCredentials = Boolean(env.GMAIL_CLIENT_ID && env.GMAIL_CLIENT_SECRET && env.GMAIL_REFRESH_TOKEN);
-
-  const emailProvider = hasGmailCredentials
+  const hasGlobalGmailCredentials = Boolean(env.GMAIL_CLIENT_ID && env.GMAIL_CLIENT_SECRET && env.GMAIL_REFRESH_TOKEN);
+  const fallbackEmailProvider = hasGlobalGmailCredentials
     ? new GmailProvider({
         clientId: env.GMAIL_CLIENT_ID!,
         clientSecret: env.GMAIL_CLIENT_SECRET!,
@@ -108,12 +113,14 @@ export function serverContainer(): ServerContainer {
       })
     : new MockEmailProvider();
 
-  if (!hasGmailCredentials) {
+  if (!hasGlobalGmailCredentials) {
     console.warn("[email] Gmail credentials missing, falling back to MockEmailProvider.");
   }
 
+  const emailProviderResolver = new EmailProviderResolver(gmailCredentialRepository, {
+    fallbackProvider: fallbackEmailProvider,
+  });
   const emailIngestionService = new EmailIngestionService(
-    emailProvider,
     [new BancoPopularAdapter(), new AsociacionCibaoAdapter(), new QikAdapter(), new GenericBankAdapter()],
     transactionRepository,
     draftRepository,
@@ -128,7 +135,7 @@ export function serverContainer(): ServerContainer {
     listTransactionsUseCase: new ListTransactionsUseCase(transactionRepository),
     listCategoriesUseCase: new ListCategoriesUseCase(categoryRepository),
     listRulesUseCase: new ListRulesUseCase(ruleRepository),
-    processIncomingEmailsUseCase: new ProcessIncomingEmailsUseCase(emailIngestionService),
+    processIncomingEmailsUseCase: new ProcessIncomingEmailsUseCase(emailIngestionService, emailProviderResolver),
     upsertBudgetUseCase: new UpsertBudgetUseCase(budgetRepository),
     createCategoryUseCase: new CreateCategoryUseCase(categoryRepository),
     updateCategoryUseCase: new UpdateCategoryUseCase(categoryRepository),
@@ -153,6 +160,7 @@ export function serverContainer(): ServerContainer {
     deleteTransactionDraftUseCase: new DeleteTransactionDraftUseCase(draftRepository),
     getFinancialStatsUseCase: financialStatsUseCase,
     userRepository,
+    gmailCredentialRepository,
   };
 
   return cachedContainer;
