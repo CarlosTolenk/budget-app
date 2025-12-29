@@ -130,3 +130,63 @@ src/
 - **Transacciones (`/transactions`):** pestañas para (1) registrar/editar movimientos manuales, (2) definir planes programados que se ejecutan con un cron diario y (3) revisar/editar borradores automáticos antes de aprobarlos.
 
 Todo el UI usa server components y datos provenientes de los casos de uso, lo que facilita exponer la misma lógica hacia APIs o automatizaciones sin duplicar reglas.
+
+## Roadmap multiusuario + Gmail OAuth individual
+Esta es la guía para convertir el MVP en una plataforma multiusuario donde cada persona conecta su cuenta de Gmail con OAuth y mantiene sus datos aislados.
+
+### 1. Autenticación y sesiones con Supabase
+1. Crea un proyecto en [Supabase](https://supabase.com/) (plan gratuito basta para el MVP) y habilita el proveedor de email/password en `Authentication → Providers`.
+2. Registra las variables en `.env` / Vercel:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=...
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+   SUPABASE_SERVICE_ROLE_KEY=... # solo en el backend para acciones privilegiadas (cron/jobs)
+   ```
+3. Instala el cliente (`@supabase/auth-helpers-nextjs`) y añade el middleware recomendado para Next App Router.
+4. Crea un wrapper server-side (`requireAuth`) que:
+   - Obtenga la sesión de Supabase.
+   - Cargue/cree un perfil en tu DB (véase siguiente sección).
+5. Ajusta las rutas protegidas para que lean `userId` desde la sesión (ya no dependeremos de credenciales `.env`).
+
+### 2. Migrar datos para soportar múltiples usuarios
+1. **Nuevo modelo `User`:**
+   - Añade una tabla `User` en Prisma (campos mínimos: `id`, `supabaseUserId`, `email`, timestamps).
+   - Sincroniza con `prisma migrate`.
+2. **Propagar `userId`:**
+   - Agrega una columna `userId` (FK) en cada tabla de negocio (`Transaction`, `Income`, `Budget`, `Category`, `Rule`, etc.).
+   - Migra la data existente: crea un usuario “admin” con el `supabaseUserId` que usarás y actualiza todas las filas previas para apuntar a ese usuario.
+3. **Repositorios y casos de uso:**
+   - Todos los `repository` deberán filtrar por `userId`.
+   - Los use cases reciben ahora `context: { userId }` (o parámetro adicional) y lo pasan a los repositorios.
+4. **Semillas/borradores:**
+   - Cuando se importen correos o se creen borradores automáticos, guarda el `userId` del dueño en la transacción borrador.
+5. **Middlewares/API routes:**
+   - Verifica el `userId` en cada handler; evita exponer datos entre usuarios.
+
+### 3. OAuth individual de Gmail por usuario
+1. Reutiliza el proyecto de Google Cloud actual (solo necesitas un `OAuth Client ID`). Configura las URIs de redirect que usará tu app (`https://app.com/api/oauth/google/callback` y `http://localhost:3000/api/oauth/google/callback` para dev).
+2. Crea un endpoint `/api/oauth/google/start` que redirija a Google con:
+   - Scope `https://www.googleapis.com/auth/gmail.readonly`
+   - `access_type=offline` y `prompt=consent`
+   - Un parámetro `state` firmado que incluya el `userId`.
+3. Implementa `/api/oauth/google/callback`:
+   - Valida el `state`.
+   - Intercambia el `code` por `access_token` + `refresh_token`.
+   - Guarda el `refresh_token` cifrado en una tabla `GmailCredential` ligada al `userId` (campos sugeridos: `userId`, `refreshToken`, `historyId`, `labelIds`, `createdAt`).
+4. **Sincronización recurrente:**
+   - Crea un job (cron o queue) que:
+     1. Obtenga todas las credenciales activas.
+     2. Para cada usuario, refresque el token, lea los mensajes nuevos (usando `historyId` para fetch incremental) y cree borradores con `userId`.
+     3. Maneje errores individuales (si un token falla, marcar al usuario como “requiere reconexión”).
+5. **Filtros/etiquetas automáticas (opcional):**
+   - Con OAuth puedes crear etiquetas/filtros por API (`Gmail.users.labels` y `Gmail.users.settings.filters`) para separar notificaciones bancarias dentro del propio correo del usuario.
+6. **Panel de usuario:**
+   - Añade una pantalla “Integraciones” donde se vea el estado de Gmail (conectado, último sync, errores) y botones para reconectar o revocar el permiso.
+
+### 4. Consideraciones adicionales
+- **Seguridad:** cifra los `refresh_token` (ej. con KMS o libsodium) y limita quién puede leerlos (solo el worker/cron). Loguea únicamente IDs; nunca el token plano.
+- **Supervisión:** guarda métricas del sync (correo procesado, errores, `historyId` actual) para depurar fácilmente.
+- **Backfill:** cuando un usuario se conecta la primera vez, permite seleccionar un rango inicial de meses para importar (p.ej. últimos 3–6 meses) antes de pasar al modo incremental.
+- **Soporte manual:** provee instrucciones y herramientas para rotar tokens, resetear `historyId`, reintentar ingestiones o transferir datos entre usuarios si fuese necesario.
+
+Siguiendo estos pasos tendrás autenticación gestionada por Supabase, datos segregados por usuario y un flujo de conexión Gmail automatizado y seguro que escala con la misma lógica de ingesta existente.
