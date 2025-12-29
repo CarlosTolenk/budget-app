@@ -5,6 +5,7 @@ import { Transaction } from "@/domain/transactions/transaction";
 import { Income } from "@/domain/income/income";
 import { ScheduledTransaction } from "@/domain/scheduled-transactions/scheduled-transaction";
 import { TransactionDraft } from "@/domain/transaction-drafts/transaction-draft";
+import { AppUser } from "@/domain/users/user";
 
 const now = new Date();
 const monthId = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -163,7 +164,7 @@ export const memoryScheduledTransactions: ScheduledTransaction[] = [
 ];
 
 export const memoryDrafts: TransactionDraft[] = [];
-export const memoryUsers = [
+export const memoryUsers: AppUser[] = [
   {
     id: memoryUserId,
     supabaseUserId: null,
