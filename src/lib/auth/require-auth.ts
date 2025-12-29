@@ -1,22 +1,15 @@
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { AUTH_COOKIE_NAME, getSessionToken, hasAuthConfig } from "../auth-config";
+import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 
 export async function requireAuth() {
-  if (!hasAuthConfig()) {
-    return;
-  }
+  const supabase = await getSupabaseServerClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  const sessionToken = getSessionToken();
-  if (!sessionToken) {
-    return;
-  }
-
-  const cookieStore = await cookies();
-  const currentToken = cookieStore.get(AUTH_COOKIE_NAME)?.value;
-
-  if (currentToken === sessionToken) {
-    return;
+  if (session) {
+    return session.user;
   }
 
   const headerStore = await headers();

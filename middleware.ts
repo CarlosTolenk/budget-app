@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { AUTH_COOKIE_NAME, getSessionToken, hasAuthConfig } from "./src/lib/auth-config";
+import { createServerClient } from "@supabase/ssr";
 
 const PUBLIC_PATHS = ["/login"];
 
@@ -18,23 +18,38 @@ function isExcluded(pathname: string) {
   return false;
 }
 
-export function middleware(request: NextRequest) {
-  if (!hasAuthConfig()) {
-    return NextResponse.next();
-  }
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+export async function middleware(request: NextRequest) {
+  const response = NextResponse.next();
 
   const { pathname } = request.nextUrl;
   if (isExcluded(pathname)) {
-    return NextResponse.next();
+    return response;
   }
 
-  const sessionToken = getSessionToken();
-  if (!sessionToken) {
-    return NextResponse.next();
-  }
-
-  const cookie = request.cookies.get(AUTH_COOKIE_NAME)?.value;
-  const isAuthenticated = cookie === sessionToken;
+  const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    cookies: {
+      get(name) {
+        return request.cookies.get(name)?.value;
+      },
+      set(name, value, options) {
+        response.cookies.set({
+          name,
+          value,
+          ...options,
+        });
+      },
+      remove(name) {
+        response.cookies.delete(name);
+      },
+    },
+  });
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const isAuthenticated = Boolean(session);
 
   if (!isAuthenticated && !isPublicPath(pathname)) {
     const loginUrl = new URL("/login", request.url);
@@ -49,7 +64,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(nextUrl);
   }
 
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {

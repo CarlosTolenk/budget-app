@@ -10,7 +10,6 @@ run();
 function run() {
   shouldParseHtmlLayout();
   shouldParsePlainTextLayout();
-  // eslint-disable-next-line no-console
   console.log("QikAdapter tests passed");
 }
 

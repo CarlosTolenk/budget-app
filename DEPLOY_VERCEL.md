@@ -21,8 +21,8 @@ Esta guía resume los pasos necesarios para publicar el proyecto en Vercel y dej
 1. En Vercel, crea un **New Project** apuntando al repositorio.
 2. Configura las variables de entorno en “Settings → Environment Variables”:
    - `DATABASE_URL` y `DIRECT_URL` (usa Postgres si pasas a producción, o deja SQLite para pruebas internas).
+   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` para que la app pueda validar sesiones.
    - `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`.
-   - `ADMIN_USERNAME`, `ADMIN_PASSWORD` para habilitar el login básico (`/login`). Estos mismos valores se usan localmente.
    - Si necesitas reconstruir el refresh token en el futuro, repite el paso 2 y actualiza estos valores aquí.
 3. El deploy inicial correrá `next build` y `prisma generate` automáticamente.
 

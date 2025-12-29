@@ -17,12 +17,16 @@ Aplicación Next.js 14 orientada a un MVP escalable para controlar un presupuest
 2. **Configurar variables de entorno**
    - El repositorio ya incluye una plantilla `.env` usando SQLite local:
      ```bash
-     DATABASE_URL="file:./dev.db"
-     DIRECT_URL="file:./dev.db"
-     GMAIL_CLIENT_ID=
-     GMAIL_CLIENT_SECRET=
-     GMAIL_REFRESH_TOKEN=
+    DATABASE_URL="file:./dev.db"
+    DIRECT_URL="file:./dev.db"
+    NEXT_PUBLIC_SUPABASE_URL=
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=
+    SUPABASE_SERVICE_ROLE_KEY=
+    GMAIL_CLIENT_ID=
+    GMAIL_CLIENT_SECRET=
+    GMAIL_REFRESH_TOKEN=
      ```
+   - `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` apuntan al proyecto de Supabase que gestionará las sesiones. `SUPABASE_SERVICE_ROLE_KEY` sólo se usa del lado del servidor (cron/queues) y **nunca** se expone en el cliente.
    - Para moverte a PostgreSQL (Vercel Postgres u otro servicio) actualiza `prisma/schema.prisma` para que `provider = "postgresql"` y sustituye `DATABASE_URL`/`DIRECT_URL` por la cadena de conexión correspondiente.
    - Mientras no existan credenciales reales de Gmail, se usa un `MockEmailProvider`; los datos persisten en el archivo SQLite local.
 3. **Ejecutar migraciones de Prisma**
@@ -90,7 +94,7 @@ src/
 
 ## Despliegue en Vercel
 1. Crear un nuevo proyecto apuntando al repo.
-2. Configurar las mismas variables de entorno (`DATABASE_URL`, `DIRECT_URL`, `GMAIL_*`). Para Vercel Postgres, `DATABASE_URL` suele apuntar al string con pooling y `DIRECT_URL` al puerto directo (para migraciones). Además, recuerda cambiar el `provider` del datasource a `"postgresql"` antes del deploy.
+2. Configurar las mismas variables de entorno (`DATABASE_URL`, `DIRECT_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `GMAIL_*`). Para Vercel Postgres, `DATABASE_URL` suele apuntar al string con pooling y `DIRECT_URL` al puerto directo (para migraciones). Además, recuerda cambiar el `provider` del datasource a `"postgresql"` antes del deploy.
 3. Añadir el cron job desde **Vercel → Settings → Cron Jobs**.
 4. Deploy (`main`) disparará `next build` y `prisma generate` automáticamente.
 
@@ -118,11 +122,11 @@ src/
 - Sin `refresh_token` en la respuesta: confirma que `access_type=offline` y `prompt=consent` estén presentes; si ya autorizaste antes, revoca el acceso y repite.
 - `invalid_client`: valida que `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` coincidan exactamente con el archivo descargado desde Google Cloud.
 
-## Autenticación básica
-- Define `ADMIN_USERNAME` y `ADMIN_PASSWORD` en tu `.env` (y en Vercel). Estos datos se usan para el login simple ubicado en `/login`.
-- El middleware bloquea todo el dashboard si no existe una sesión válida. Los cron jobs `/api/cron/*` quedan excluidos para que Vercel pueda invocarlos.
-- El formulario de login compara las credenciales con las variables de entorno y, si coinciden, guarda una cookie HTTP-only con un token derivado de usuario+contraseña.
-- Usa el botón “Cerrar sesión” del encabezado para borrar la cookie y volver al login.
+## Autenticación con Supabase
+- La ruta `/login` usa Supabase Auth (email/password). Crea usuarios desde el panel de Supabase o habilita self-service signup si lo prefieres.
+- El middleware (`middleware.ts`) utiliza `createMiddlewareClient` para hidratar la sesión en cada request y redirigir automáticamente a `/login` cuando no exista.
+- `requireAuth` se apoya en Supabase para todas las páginas server-side (`app/page.tsx`, `/budget`, `/stats`, `/transactions`, etc.).
+- El botón “Cerrar sesión” ejecuta `supabase.auth.signOut()` vía server action. Las cookies `sb-...` se regeneran automáticamente.
 
 ## UI actual (MVP)
 - **Dashboard (`/`):** resumen anual/mes corrido, buckets 50/30/20, gráfica con ingresos/gastos de los últimos 6 meses (con montos visibles por mes), selector de mes (inputs + prev/next), últimos movimientos y reglas activas.
@@ -142,7 +146,7 @@ Esta es la guía para convertir el MVP en una plataforma multiusuario donde cada
    NEXT_PUBLIC_SUPABASE_ANON_KEY=...
    SUPABASE_SERVICE_ROLE_KEY=... # solo en el backend para acciones privilegiadas (cron/jobs)
    ```
-3. Instala el cliente (`@supabase/auth-helpers-nextjs`) y añade el middleware recomendado para Next App Router.
+3. Instala `@supabase/ssr` (el reemplazo de los antiguos auth-helpers) y sigue la guía de middleware para Next App Router.
 4. Crea un wrapper server-side (`requireAuth`) que:
    - Obtenga la sesión de Supabase.
    - Cargue/cree un perfil en tu DB (véase siguiente sección).

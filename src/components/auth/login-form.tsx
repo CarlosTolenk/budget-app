@@ -54,11 +54,11 @@ export function LoginForm({ redirectTo = "/" }: LoginFormProps) {
       <input type="hidden" name="redirectTo" value={redirectTo} />
       <div>
         <label className="block text-xs font-semibold uppercase tracking-wide text-slate-400">
-          Usuario
+          Correo
           <input
-            name="username"
-            type="text"
-            autoComplete="username"
+            name="email"
+            type="email"
+            autoComplete="email"
             required
             className="mt-2 w-full rounded-lg border border-white/10 bg-slate-900/80 px-3 py-2 text-white focus:border-white/60 focus:outline-none"
           />
