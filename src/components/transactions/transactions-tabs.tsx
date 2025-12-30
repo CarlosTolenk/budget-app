@@ -112,6 +112,8 @@ function ManualPanel({ manual, categories }: { manual: Transaction[]; categories
     const normalizedTerm = searchTerm.trim().toLowerCase();
     const min = minAmount ? Number(minAmount) : undefined;
     const max = maxAmount ? Number(maxAmount) : undefined;
+    const minValue = typeof min === "number" && !Number.isNaN(min) ? Math.abs(min) : undefined;
+    const maxValue = typeof max === "number" && !Number.isNaN(max) ? Math.abs(max) : undefined;
     const start = startDate ? new Date(startDate) : undefined;
     const end = endDate ? new Date(endDate) : undefined;
 
@@ -142,10 +144,11 @@ function ManualPanel({ manual, categories }: { manual: Transaction[]; categories
         if (end && transaction.date > end) {
           return false;
         }
-        if (typeof min === "number" && !Number.isNaN(min) && transaction.amount < min) {
+        const normalizedAmount = Math.abs(transaction.amount);
+        if (typeof minValue === "number" && normalizedAmount < minValue) {
           return false;
         }
-        if (typeof max === "number" && !Number.isNaN(max) && transaction.amount > max) {
+        if (typeof maxValue === "number" && normalizedAmount > maxValue) {
           return false;
         }
         return true;
