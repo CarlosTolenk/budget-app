@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { LogoutButton } from "./logout-button";
+import { NotificationsBell } from "./notifications-bell";
 
 const links = [
   { href: "/", label: "Dashboard" },
@@ -51,22 +52,22 @@ export function Navigation() {
 
   return (
     <nav className="contents" aria-label="Navegación principal">
-      <div className="flex items-center gap-3 text-sm">
-        <div className="hidden gap-3 md:flex">{renderLinks()}</div>
-        <div className="hidden md:block">
-          <LogoutButton />
-        </div>
-        <div className="flex justify-end md:hidden">
-          <button
-            type="button"
-            aria-expanded={isMobileOpen}
-            aria-controls="main-navigation"
-            onClick={() => setIsMobileOpen((open) => !open)}
-            className="rounded-full border border-white/20 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-white/40 hover:text-white"
-          >
-            {isMobileOpen ? "Cerrar" : "Menú"}
-          </button>
-        </div>
+      <div className="hidden items-center gap-3 text-sm md:flex">
+        <div className="flex items-center gap-2">{renderLinks()}</div>
+        <NotificationsBell />
+        <LogoutButton />
+      </div>
+      <div className="flex items-center justify-end gap-2 md:hidden">
+        <NotificationsBell />
+        <button
+          type="button"
+          aria-expanded={isMobileOpen}
+          aria-controls="main-navigation"
+          onClick={() => setIsMobileOpen((open) => !open)}
+          className="rounded-full border border-white/20 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-white/40 hover:text-white"
+        >
+          {isMobileOpen ? "Cerrar" : "Menú"}
+        </button>
       </div>
 
       <div
