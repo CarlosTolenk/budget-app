@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useMemo, useState, type ReactNode } from "react";
+import clsx from "clsx";
 import { Category } from "@/domain/categories/category";
 import { Transaction } from "@/domain/transactions/transaction";
 import { deleteTransactionAction } from "@/app/actions/delete-transaction-action";
@@ -45,29 +46,28 @@ export function TransactionActions({ transaction, categories }: TransactionActio
 
   const canSubmit = filteredCategories.length > 0 && Boolean(resolvedCategoryId);
 
-  useEffect(() => {
-    if (deleteState.status === "success") {
-      setTransactionToDelete(null);
-    }
-  }, [deleteState.status]);
+  const handleDeleteAction = (formData: FormData) => {
+    setTransactionToDelete(null);
+    deleteAction(formData);
+  };
 
   return (
-    <div className="mt-2 space-y-2 text-xs">
-      <div className="flex gap-2">
-        <button
-          type="button"
+    <div className="text-xs">
+      <div className="flex items-center justify-end gap-2">
+        <IconActionButton
           onClick={() => setIsEditing((prev) => !prev)}
-          className="rounded-full border border-white/20 px-3 py-1 text-xs text-white"
+          label={isEditing ? "Cerrar edición" : "Editar transacción"}
+          ariaPressed={isEditing}
         >
-          {isEditing ? "Cerrar" : "Editar"}
-        </button>
-        <button
-          type="button"
+          <EditIcon />
+        </IconActionButton>
+        <IconActionButton
           onClick={() => setTransactionToDelete(transaction)}
-          className="rounded-full border border-rose-300 px-3 py-1 text-xs text-rose-200 transition hover:border-rose-200"
+          label="Eliminar transacción"
+          tone="danger"
         >
-          Eliminar
-        </button>
+          <TrashIcon />
+        </IconActionButton>
       </div>
       {deleteState.status === "error" && <p className="text-rose-300">{deleteState.message}</p>}
       {isEditing && (
@@ -155,7 +155,7 @@ export function TransactionActions({ transaction, categories }: TransactionActio
             {deleteState.status === "error" && deleteState.message && (
               <p className="mt-3 text-xs text-rose-300">{deleteState.message}</p>
             )}
-            <form action={deleteAction} className="mt-6 flex justify-end gap-2">
+            <form action={handleDeleteAction} className="mt-6 flex justify-end gap-2">
               <input type="hidden" name="transactionId" value={transactionToDelete.id} />
               <button
                 type="button"
@@ -170,5 +170,60 @@ export function TransactionActions({ transaction, categories }: TransactionActio
         </div>
       ) : null}
     </div>
+  );
+}
+
+function IconActionButton({
+  children,
+  label,
+  onClick,
+  tone = "default",
+  ariaPressed,
+}: {
+  children: ReactNode;
+  label: string;
+  onClick: () => void;
+  tone?: "default" | "danger";
+  ariaPressed?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={ariaPressed}
+      title={label}
+      className={clsx(
+        "h-8 w-8 rounded-full border px-2 py-2 text-white transition hover:border-white/60",
+        tone === "danger"
+          ? "border-rose-300/80 text-rose-100 hover:bg-rose-500/10"
+          : "border-white/20 hover:bg-white/10",
+        ariaPressed ? "bg-white/20" : "",
+      )}
+    >
+      <span className="sr-only">{label}</span>
+      <div className="flex h-full w-full items-center justify-center">{children}</div>
+    </button>
+  );
+}
+
+function EditIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+      <path
+        d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm14.71-9.04a1.003 1.003 0 0 0 0-1.42l-2.5-2.5a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.99-1.66z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+      <path
+        d="M6 7h12v13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7zm9-4v3H9V3h6zm-8 3H5V5h4V3h6v2h4v1h-2v13a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3V6H7z"
+        fill="currentColor"
+      />
+    </svg>
   );
 }

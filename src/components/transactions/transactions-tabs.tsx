@@ -4,7 +4,7 @@ import { useActionState, useMemo, useState, useTransition } from "react";
 import clsx from "clsx";
 import { format } from "date-fns";
 import { Category } from "@/domain/categories/category";
-import { Transaction } from "@/domain/transactions/transaction";
+import { Transaction, TransactionSource } from "@/domain/transactions/transaction";
 import { ScheduledTransaction } from "@/domain/scheduled-transactions/scheduled-transaction";
 import { TransactionDraft } from "@/domain/transaction-drafts/transaction-draft";
 import { formatCurrency } from "@/lib/format";
@@ -23,6 +23,12 @@ const bucketOptions = [
   { value: "WANTS", label: "Wants" },
   { value: "SAVINGS", label: "Savings" },
 ] as const;
+
+const sourceDisplay: Record<TransactionSource, { label: string; badgeClass: string }> = {
+  MANUAL: { label: "Manual", badgeClass: "bg-slate-100/10 text-slate-100" },
+  EMAIL: { label: "Correo", badgeClass: "bg-emerald-400/10 text-emerald-200" },
+  SCHEDULED: { label: "Programada", badgeClass: "bg-sky-400/10 text-sky-200" },
+};
 
 interface TransactionsTabsProps {
   manual: Transaction[];
@@ -84,35 +90,292 @@ export function TransactionsTabs({
 }
 
 function ManualPanel({ manual, categories }: { manual: Transaction[]; categories: Category[] }) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<"all" | string>("all");
+  const [bucketFilter, setBucketFilter] = useState<"all" | (typeof bucketOptions)[number]["value"]>("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [minAmount, setMinAmount] = useState("");
+  const [maxAmount, setMaxAmount] = useState("");
+  const [page, setPage] = useState(1);
+
+  const pageSize = 8;
+
+  const categoryNameMap = useMemo(() => {
+    return categories.reduce<Record<string, string>>((acc, category) => {
+      acc[category.id] = category.name;
+      return acc;
+    }, {});
+  }, [categories]);
+
+  const filteredTransactions = useMemo(() => {
+    const normalizedTerm = searchTerm.trim().toLowerCase();
+    const min = minAmount ? Number(minAmount) : undefined;
+    const max = maxAmount ? Number(maxAmount) : undefined;
+    const start = startDate ? new Date(startDate) : undefined;
+    const end = endDate ? new Date(endDate) : undefined;
+
+    if (start) {
+      start.setHours(0, 0, 0, 0);
+    }
+    if (end) {
+      end.setHours(23, 59, 59, 999);
+    }
+
+    return [...manual]
+      .filter((transaction) => {
+        if (categoryFilter !== "all" && transaction.categoryId !== categoryFilter) {
+          return false;
+        }
+        if (bucketFilter !== "all" && transaction.bucket !== bucketFilter) {
+          return false;
+        }
+        if (normalizedTerm) {
+          const descriptor = transaction.merchant ?? "Sin descripción";
+          if (!descriptor.toLowerCase().includes(normalizedTerm)) {
+            return false;
+          }
+        }
+        if (start && transaction.date < start) {
+          return false;
+        }
+        if (end && transaction.date > end) {
+          return false;
+        }
+        if (typeof min === "number" && !Number.isNaN(min) && transaction.amount < min) {
+          return false;
+        }
+        if (typeof max === "number" && !Number.isNaN(max) && transaction.amount > max) {
+          return false;
+        }
+        return true;
+      })
+      .sort((a, b) => b.date.getTime() - a.date.getTime());
+  }, [manual, searchTerm, categoryFilter, bucketFilter, startDate, endDate, minAmount, maxAmount]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+
+  const paginatedTransactions = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredTransactions.slice(startIndex, startIndex + pageSize);
+  }, [filteredTransactions, currentPage, pageSize]);
+
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="space-y-6">
       <TransactionForm categories={categories} />
       <article className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
-        <h2 className="text-xl font-semibold">Transacciones registradas</h2>
-        <div className="mt-4 space-y-4">
-          {manual.map((transaction) => (
-            <div key={transaction.id} className="flex items-start justify-between gap-4 border-b border-white/5 pb-4 last:border-b-0">
-              <div>
-                <p className="font-medium">{transaction.merchant ?? "Sin descripción"}</p>
-                <p className="text-xs text-slate-400">
-                  {format(transaction.date, "dd MMM yyyy")} · {transaction.bucket} · {transaction.source}
-                </p>
-              </div>
-              <div className="text-right">
-                <p
-                  className={clsx(
-                    "text-lg font-semibold",
-                    transaction.amount >= 0 ? "text-emerald-300" : "text-rose-300",
-                  )}
-                >
-                  {formatCurrency(transaction.amount, transaction.currency)}
-                </p>
-                <TransactionActions transaction={transaction} categories={categories} />
-              </div>
-            </div>
-          ))}
-          {!manual.length && <p className="text-sm text-slate-400">Aún no tienes transacciones en este mes.</p>}
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-semibold">Transacciones registradas</h2>
+            <p className="text-sm text-slate-400">Filtra y navega tus movimientos manuales fácilmente.</p>
+          </div>
+          <div className="text-xs text-slate-300">
+            Mostrando {filteredTransactions.length} de {manual.length} transacciones
+          </div>
         </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <label className="text-xs text-slate-300">
+            Búsqueda
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(event) => {
+                setSearchTerm(event.target.value);
+                setPage(1);
+              }}
+              placeholder="Descripción o comercio"
+              className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-white/40 focus:outline-none"
+            />
+          </label>
+
+          <label className="text-xs text-slate-300">
+            Categoría
+            <select
+              value={categoryFilter}
+              onChange={(event) => {
+                setCategoryFilter(event.target.value as typeof categoryFilter);
+                setPage(1);
+              }}
+              className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white focus:border-white/40 focus:outline-none"
+            >
+              <option value="all">Todas</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="text-xs text-slate-300">
+            Bucket
+            <select
+              value={bucketFilter}
+              onChange={(event) => {
+                setBucketFilter(event.target.value as typeof bucketFilter);
+                setPage(1);
+              }}
+              className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white focus:border-white/40 focus:outline-none"
+            >
+              <option value="all">Todos</option>
+              {bucketOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="text-xs text-slate-300">
+            Desde
+            <input
+              type="date"
+              value={startDate}
+              onChange={(event) => {
+                setStartDate(event.target.value);
+                setPage(1);
+              }}
+              className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white focus:border-white/40 focus:outline-none"
+            />
+          </label>
+
+          <label className="text-xs text-slate-300">
+            Hasta
+            <input
+              type="date"
+              value={endDate}
+              onChange={(event) => {
+                setEndDate(event.target.value);
+                setPage(1);
+              }}
+              className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white focus:border-white/40 focus:outline-none"
+            />
+          </label>
+
+          <label className="text-xs text-slate-300">
+            Monto mínimo
+            <input
+              type="number"
+              value={minAmount}
+              onChange={(event) => {
+                setMinAmount(event.target.value);
+                setPage(1);
+              }}
+              placeholder="0"
+              className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-white/40 focus:outline-none"
+            />
+          </label>
+          <label className="text-xs text-slate-300">
+            Monto máximo
+            <input
+              type="number"
+              value={maxAmount}
+              onChange={(event) => {
+                setMaxAmount(event.target.value);
+                setPage(1);
+              }}
+              placeholder="0"
+              className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-white/40 focus:outline-none"
+            />
+          </label>
+        </div>
+
+        <div className="mt-6 overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs uppercase tracking-wide text-slate-400">
+                <th className="pb-3 pr-4 font-medium">Descripción</th>
+                <th className="pb-3 pr-4 font-medium">Categoría</th>
+                <th className="pb-3 pr-4 font-medium">Origen</th>
+                <th className="pb-3 pr-4 font-medium">Fecha</th>
+                <th className="pb-3 pr-4 font-medium text-right">Monto</th>
+                <th className="pb-3 text-right font-medium">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedTransactions.map((transaction) => {
+                const categoryLabel = transaction.categoryId
+                  ? categoryNameMap[transaction.categoryId] ?? "Sin categoría"
+                  : "Sin categoría";
+                const sourceInfo = sourceDisplay[transaction.source] ?? sourceDisplay.MANUAL;
+                return (
+                  <tr key={transaction.id} className="border-t border-white/5 text-sm last:border-b last:border-white/5">
+                    <td className="py-3 pr-4 align-top">
+                      <p className="font-semibold text-white">{transaction.merchant ?? "Sin descripción"}</p>
+                      <p className="text-xs text-slate-400">{transaction.bucket}</p>
+                    </td>
+                    <td className="py-3 pr-4 align-top text-slate-100">{categoryLabel}</td>
+                    <td className="py-3 pr-4 align-top">
+                      <span
+                        className={clsx(
+                          "inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
+                          sourceInfo.badgeClass,
+                        )}
+                      >
+                        {sourceInfo.label}
+                      </span>
+                    </td>
+                    <td className="py-3 pr-4 align-top text-slate-100">{format(transaction.date, "dd MMM yyyy")}</td>
+                    <td
+                      className={clsx(
+                        "py-3 pr-4 text-right font-semibold",
+                        transaction.amount >= 0 ? "text-emerald-300" : "text-rose-300",
+                      )}
+                    >
+                      {formatCurrency(transaction.amount, transaction.currency)}
+                    </td>
+                    <td className="py-3 text-right align-top">
+                      <TransactionActions transaction={transaction} categories={categories} />
+                    </td>
+                  </tr>
+                );
+              })}
+              {!paginatedTransactions.length && (
+                <tr>
+                  <td colSpan={5} className="py-6 text-center text-sm text-slate-400">
+                    {manual.length
+                      ? "No hay transacciones que coincidan con los filtros seleccionados."
+                      : "Aún no tienes transacciones en este mes."}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {filteredTransactions.length > 0 && (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-300">
+            <span>
+              Página {currentPage} de {totalPages}
+            </span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((current) => Math.max(current - 1, 1))}
+                disabled={currentPage <= 1}
+                className={clsx(
+                  "rounded-full border border-white/20 px-4 py-2 font-semibold transition",
+                  currentPage <= 1 ? "cursor-not-allowed opacity-40" : "hover:border-white/40",
+                )}
+              >
+                Anterior
+              </button>
+              <button
+                type="button"
+                onClick={() => setPage((current) => Math.min(current + 1, totalPages))}
+                disabled={currentPage >= totalPages}
+                className={clsx(
+                  "rounded-full border border-white/20 px-4 py-2 font-semibold transition",
+                  currentPage >= totalPages ? "cursor-not-allowed opacity-40" : "hover:border-white/40",
+                )}
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
+        )}
       </article>
     </div>
   );
