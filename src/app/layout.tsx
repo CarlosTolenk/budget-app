@@ -31,7 +31,7 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <div className="min-h-screen bg-slate-950 text-white">
           <GlobalLoadingBar />
-          <header className="border-b border-white/10 bg-slate-950/90 backdrop-blur">
+          <header className="relative z-20 border-b border-white/10 bg-slate-950/90 backdrop-blur">
             <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-4">
               <Link href="/" className="text-lg font-semibold tracking-tight text-white">
                 <span className="md:hidden">Presupuesto</span>

@@ -14,10 +14,18 @@ export async function getSupabaseServerClient(): Promise<SupabaseClient> {
         return cookieStore.get(name)?.value;
       },
       set(name, value, options) {
-        cookieStore.set({ name, value, ...options });
+        try {
+          cookieStore.set({ name, value, ...options });
+        } catch (error) {
+          console.warn("Unable to set cookie in this context", error);
+        }
       },
       remove(name) {
-        cookieStore.delete(name);
+        try {
+          cookieStore.delete(name);
+        } catch (error) {
+          console.warn("Unable to remove cookie in this context", error);
+        }
       },
     },
   });
