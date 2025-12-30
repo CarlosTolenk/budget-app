@@ -1,6 +1,7 @@
 "use client";
 
 import { formatCurrency, formatMonthLabel } from "@/lib/format";
+import clsx from "clsx";
 
 interface CategorySpendingChartProps {
   month: string;
@@ -47,8 +48,16 @@ export function CategorySpendingChart({ month, data }: CategorySpendingChartProp
       </div>
       <ul className="mt-4 max-h-[360px] space-y-4 overflow-y-auto pr-2">
         {data.map((item) => {
-          const plannedWidth = (item.planned / maxAmount) * 100;
-          const actualWidth = (item.actual / maxAmount) * 100;
+          const hasPlan = item.planned > 0;
+          const baseWidth = hasPlan ? 100 : Math.min((item.actual / maxAmount) * 100, 100);
+          const actualWidth = hasPlan
+            ? Math.min((item.actual / item.planned) * 100, 100)
+            : Math.min((item.actual / Math.max(item.actual, 1)) * 100, 100);
+          const ratio = hasPlan && item.planned > 0 ? item.actual / item.planned : 0;
+          const barClass = clsx(
+            "relative h-full rounded-full transition-all",
+            ratio < 0.9 ? "bg-emerald-400/80" : ratio < 0.99 ? "bg-amber-300/80" : "bg-rose-300/80",
+          );
           const delta = item.planned - item.actual;
           return (
             <li key={item.id}>
@@ -70,12 +79,9 @@ export function CategorySpendingChart({ month, data }: CategorySpendingChartProp
               <div className="relative mt-2 h-3 rounded-full bg-white/10">
                 <div
                   className="absolute inset-y-0 left-0 rounded-full bg-white/20"
-                  style={{ width: `${Math.min(plannedWidth, 100)}%` }}
+                  style={{ width: `${baseWidth}%` }}
                 />
-                <div
-                  className="relative h-full rounded-full bg-rose-300/80"
-                  style={{ width: `${Math.min(actualWidth, 100)}%` }}
-                />
+                <div className={barClass} style={{ width: `${actualWidth}%` }} />
               </div>
             </li>
           );
