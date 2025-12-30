@@ -6,7 +6,7 @@ import { Category } from "@/domain/categories/category";
 import { Transaction } from "@/domain/transactions/transaction";
 import { deleteTransactionAction } from "@/app/actions/delete-transaction-action";
 import { updateTransactionAction } from "@/app/actions/update-transaction-action";
-import { initialActionState } from "@/app/actions/action-state";
+import { initialActionState, type ActionState } from "@/app/actions/action-state";
 import { format } from "date-fns";
 import { ModalConfirmButton } from "@/components/ui/modal-confirm-button";
 
@@ -23,7 +23,14 @@ interface TransactionActionsProps {
 
 export function TransactionActions({ transaction, categories }: TransactionActionsProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [formState, formAction] = useActionState(updateTransactionAction, initialActionState);
+  const enhancedUpdateAction = async (prev: ActionState, formData: FormData) => {
+    const result = await updateTransactionAction(prev, formData);
+    if (result.status === "success") {
+      setIsEditing(false);
+    }
+    return result;
+  };
+  const [formState, formAction] = useActionState(enhancedUpdateAction, initialActionState);
   const [deleteState, deleteAction] = useActionState(deleteTransactionAction, initialActionState);
   const [bucket, setBucket] = useState<"NEEDS" | "WANTS" | "SAVINGS">(transaction.bucket);
   const [categoryId, setCategoryId] = useState(transaction.categoryId ?? "");
@@ -73,6 +80,16 @@ export function TransactionActions({ transaction, categories }: TransactionActio
       {isEditing && (
         <form action={formAction} className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
           <input type="hidden" name="transactionId" value={transaction.id} />
+          <label className="flex flex-col gap-1 text-[11px] uppercase tracking-wide text-slate-400">
+            Descripción
+            <input
+              type="text"
+              name="merchant"
+              defaultValue={transaction.merchant ?? ""}
+              placeholder="Nombre del comercio o nota"
+              className="rounded-lg border border-white/10 bg-white/10 px-3 py-1 text-white placeholder:text-slate-400"
+            />
+          </label>
           <label className="flex flex-col gap-1 text-[11px] uppercase tracking-wide text-slate-400">
             Fecha
             <input
