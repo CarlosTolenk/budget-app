@@ -156,6 +156,8 @@ function ManualPanel({ manual, categories }: { manual: Transaction[]; categories
       .sort((a, b) => b.date.getTime() - a.date.getTime());
   }, [manual, searchTerm, categoryFilter, bucketFilter, startDate, endDate, minAmount, maxAmount]);
 
+  const filteredTotalAmount = filteredTransactions.reduce((sum, transaction) => sum + transaction.amount, 0);
+  const filteredCurrency = filteredTransactions[0]?.currency ?? manual[0]?.currency ?? "USD";
   const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / pageSize));
   const currentPage = Math.min(page, totalPages);
 
@@ -173,8 +175,11 @@ function ManualPanel({ manual, categories }: { manual: Transaction[]; categories
             <h2 className="text-xl font-semibold">Transacciones registradas</h2>
             <p className="text-sm text-slate-400">Filtra y navega tus movimientos manuales fácilmente.</p>
           </div>
-          <div className="text-xs text-slate-300">
-            Mostrando {filteredTransactions.length} de {manual.length} transacciones
+          <div className="text-xs text-slate-300 space-y-1 text-right">
+            <p>Mostrando {filteredTransactions.length} de {manual.length} transacciones</p>
+            <p className="font-semibold text-white">
+              Total filtrado: {formatCurrency(filteredTotalAmount, filteredCurrency)}
+            </p>
           </div>
         </div>
 
