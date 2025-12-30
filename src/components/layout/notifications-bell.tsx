@@ -4,29 +4,30 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import clsx from "clsx";
 import { formatCurrency, formatPercent } from "@/lib/format";
+import { Bucket } from "@/domain/value-objects/bucket";
 
 export type BudgetAlert = {
   id: string;
   categoryName: string;
-  level: "warning" | "danger";
+  bucket: Bucket;
+  level: "warning" | "danger" | "success";
   planned: number;
   spent: number;
   ratio: number;
 };
 
-const levelCopy: Record<
-  BudgetAlert["level"],
-  { title: string; accent: string; text: string }
-> = {
+const levelCopy: Record<BudgetAlert["level"], { accent: string; text: string }> = {
   warning: {
-    title: "Alerta",
     accent: "bg-amber-400/10 text-amber-200 border-amber-400/40",
-    text: "Estás cerca de llegar al plan.",
+    text: "Estás cerca del objetivo.",
   },
   danger: {
-    title: "Crítico",
     accent: "bg-rose-500/10 text-rose-200 border-rose-400/40",
     text: "Sobrepasaste tu plan.",
+  },
+  success: {
+    accent: "bg-emerald-500/10 text-emerald-200 border-emerald-400/40",
+    text: "Meta alcanzada.",
   },
 };
 
@@ -36,10 +37,14 @@ export function NotificationsBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDesktop, setIsDesktop] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const badgeTone = useMemo(() => {
     if (alerts.some((alert) => alert.level === "danger")) {
       return "danger";
+    }
+    if (alerts.some((alert) => alert.level === "success")) {
+      return "success";
     }
     if (alerts.length > 0) {
       return "warning";
@@ -100,7 +105,23 @@ export function NotificationsBell() {
   }, [currentMonth]);
 
   useEffect(() => {
-    if (!isOpen) {
+    const media = window.matchMedia("(min-width: 768px)");
+    const syncMatch = () => setIsDesktop(media.matches);
+    syncMatch();
+    media.addEventListener?.("change", syncMatch);
+    if (!media.addEventListener && media.addListener) {
+      media.addListener(syncMatch);
+    }
+    return () => {
+      media.removeEventListener?.("change", syncMatch);
+      if (!media.removeEventListener && media.removeListener) {
+        media.removeListener(syncMatch);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen || !isDesktop) {
       return;
     }
     const handleClick = (event: MouseEvent) => {
@@ -108,15 +129,23 @@ export function NotificationsBell() {
         setIsOpen(false);
       }
     };
+    window.addEventListener("mousedown", handleClick);
+    return () => {
+      window.removeEventListener("mousedown", handleClick);
+    };
+  }, [isOpen, isDesktop]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setIsOpen(false);
       }
     };
-    window.addEventListener("mousedown", handleClick);
     window.addEventListener("keydown", handleKey);
     return () => {
-      window.removeEventListener("mousedown", handleClick);
       window.removeEventListener("keydown", handleKey);
     };
   }, [isOpen]);
@@ -139,7 +168,9 @@ export function NotificationsBell() {
             ? "border-rose-400/60 bg-rose-500/10 text-rose-100 hover:border-rose-200"
             : badgeTone === "warning"
               ? "border-amber-300/60 bg-amber-400/10 text-amber-100 hover:border-amber-200"
-              : "border-white/20 bg-white/5 text-white hover:border-white/40",
+              : badgeTone === "success"
+                ? "border-emerald-300/60 bg-emerald-400/10 text-emerald-100 hover:border-emerald-200"
+                : "border-white/20 bg-white/5 text-white hover:border-white/40",
         )}
       >
         <BellIcon />
@@ -149,7 +180,9 @@ export function NotificationsBell() {
               "absolute -right-1 -top-1 flex h-5 min-w-[1rem] items-center justify-center rounded-full px-1 text-[11px] font-semibold",
               badgeTone === "danger"
                 ? "bg-rose-500 text-white"
-                : "bg-amber-400 text-slate-900",
+                : badgeTone === "success"
+                  ? "bg-emerald-400 text-slate-900"
+                  : "bg-amber-400 text-slate-900",
             )}
           >
             {alerts.length}
@@ -157,28 +190,56 @@ export function NotificationsBell() {
         )}
       </button>
 
-      {isOpen && (
-        <div className="absolute right-0 z-[70] mt-3 w-80 rounded-2xl border border-white/10 bg-slate-950/95 p-4 text-sm shadow-2xl">
-          <div className="flex items-center justify-between">
-            <p className="font-semibold text-white">Alertas de presupuesto</p>
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              className="text-xs text-slate-400 transition hover:text-white"
-            >
-              Cerrar
-            </button>
+      {isOpen &&
+        (isDesktop ? (
+          <div className="absolute right-0 z-[70] mt-3 w-80 rounded-2xl border border-white/10 bg-slate-950/95 p-4 text-sm shadow-2xl">
+            {renderPanelContent()}
           </div>
-          <p className="mt-1 text-xs text-slate-400">
-            Recibirás avisos cuando alguna categoría supere el 80% de lo planificado.
-          </p>
-          <div className="mt-4 max-h-80 space-y-3 overflow-y-auto pr-1 text-sm">
-            {isLoading ? (
-              <p className="text-sm text-slate-400">Cargando alertas...</p>
-            ) : error ? (
-              <p className="text-sm text-rose-300">{error}</p>
-            ) : alerts.length ? (
-              alerts.map((alert) => (
+        ) : (
+          <div
+            className="fixed inset-0 z-[70] flex items-start justify-center bg-slate-950/70 px-4 pt-20"
+            onClick={(event) => {
+              if (event.target === event.currentTarget) {
+                setIsOpen(false);
+              }
+            }}
+          >
+            <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-950/95 p-5 text-sm shadow-2xl">
+              {renderPanelContent()}
+            </div>
+          </div>
+        ))}
+    </div>
+  );
+
+  function renderPanelContent() {
+    return (
+      <>
+        <div className="flex items-center justify-between">
+          <p className="font-semibold text-white">Alertas de presupuesto</p>
+          <button
+            type="button"
+            onClick={() => setIsOpen(false)}
+            className="text-xs text-slate-400 transition hover:text-white"
+          >
+            Cerrar
+          </button>
+        </div>
+        <p className="mt-1 text-xs text-slate-400">
+          Recibirás avisos cuando alguna categoría supere el 80% de lo planificado.
+        </p>
+        <div className="mt-4 max-h-80 space-y-3 overflow-y-auto pr-1 text-sm">
+          {isLoading ? (
+            <p className="text-sm text-slate-400">Cargando alertas...</p>
+          ) : error ? (
+            <p className="text-sm text-rose-300">{error}</p>
+          ) : alerts.length ? (
+            alerts.map((alert) => {
+              const isSavings = alert.bucket === "SAVINGS";
+              const remaining = Math.max(alert.planned - alert.spent, 0);
+              const overage = Math.max(alert.spent - alert.planned, 0);
+              const isSuccess = alert.level === "success";
+              return (
                 <div
                   key={alert.id}
                   className={clsx(
@@ -192,29 +253,39 @@ export function NotificationsBell() {
                       {formatPercent(alert.ratio)}
                     </span>
                   </div>
-                  <p className="text-xs text-white/80">{levelCopy[alert.level].text}</p>
+                  <p className="text-xs text-white/80">
+                    {isSavings
+                      ? isSuccess
+                        ? "Alcanzaste tu meta de ahorro."
+                        : "Tu meta de ahorro está cerca de completarse."
+                      : levelCopy[alert.level].text}
+                  </p>
                   <p className="mt-2 text-xs text-slate-200">
                     {formatCurrency(alert.spent)} gastado de {formatCurrency(alert.planned)} planificado.
                   </p>
-                  {alert.level === "danger" ? (
-                    <p className="text-[11px] text-rose-100">
-                      Exceso: {formatCurrency(alert.spent - alert.planned)}
+                  {isSavings ? (
+                    <p className={clsx("text-[11px]", isSuccess ? "text-emerald-200" : "text-amber-100")}>
+                      {isSuccess
+                        ? `Meta superada por ${formatCurrency(overage)}.`
+                        : `Faltan ${formatCurrency(remaining)} para completar la meta.`}
                     </p>
+                  ) : alert.level === "danger" ? (
+                    <p className="text-[11px] text-rose-100">Exceso: {formatCurrency(overage)}</p>
                   ) : (
                     <p className="text-[11px] text-amber-100">
-                      Disponible antes del límite: {formatCurrency(Math.max(alert.planned - alert.spent, 0))}
+                      Disponible antes del límite: {formatCurrency(remaining)}
                     </p>
                   )}
                 </div>
-              ))
-            ) : (
-              <p className="text-sm text-slate-400">No tienes alertas este mes.</p>
-            )}
-          </div>
+              );
+            })
+          ) : (
+            <p className="text-sm text-slate-400">No tienes alertas este mes.</p>
+          )}
         </div>
-      )}
-    </div>
-  );
+      </>
+    );
+  }
 }
 
 function BellIcon() {
