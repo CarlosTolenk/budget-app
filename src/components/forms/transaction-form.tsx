@@ -4,21 +4,7 @@ import { useActionState, useMemo, useState } from "react";
 import { createTransactionAction } from "@/app/actions/transaction-actions";
 import { initialActionState } from "@/app/actions/action-state";
 import { Category } from "@/domain/categories/category";
-
-const buckets: Array<{ value: "NEEDS" | "WANTS" | "SAVINGS"; label: string }> = [
-  { value: "NEEDS", label: "Needs" },
-  { value: "WANTS", label: "Wants" },
-  { value: "SAVINGS", label: "Savings" },
-];
-
-function pickDefaultBucket(categories: Category[]): "NEEDS" | "WANTS" | "SAVINGS" {
-  for (const bucket of buckets) {
-    if (categories.some((category) => category.bucket === bucket.value)) {
-      return bucket.value;
-    }
-  }
-  return "NEEDS";
-}
+import { bucketOptions, pickDefaultBucket, type BucketValue } from "@/components/forms/bucket-options";
 
 interface TransactionFormProps {
   categories: Category[];
@@ -27,7 +13,7 @@ interface TransactionFormProps {
 export function TransactionForm({ categories }: TransactionFormProps) {
   const [state, formAction] = useActionState(createTransactionAction, initialActionState);
   const today = new Date().toISOString().slice(0, 10);
-  const [bucket, setBucket] = useState<"NEEDS" | "WANTS" | "SAVINGS">(() => pickDefaultBucket(categories));
+  const [bucket, setBucket] = useState<BucketValue>(() => pickDefaultBucket(categories));
   const [categoryId, setCategoryId] = useState("");
 
   const bucketCategories = useMemo(
@@ -99,11 +85,11 @@ export function TransactionForm({ categories }: TransactionFormProps) {
             name="bucket"
             className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
             value={bucket}
-            onChange={(event) => setBucket(event.target.value as "NEEDS" | "WANTS" | "SAVINGS")}
+            onChange={(event) => setBucket(event.target.value as BucketValue)}
           >
-            {buckets.map((bucketOption) => (
-              <option key={bucketOption.value} value={bucketOption.value} className="text-slate-900">
-                {bucketOption.label}
+            {bucketOptions.map((option) => (
+              <option key={option.value} value={option.value} className="text-slate-900">
+                {option.label}
               </option>
             ))}
           </select>

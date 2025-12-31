@@ -4,15 +4,10 @@ import { useActionState, useMemo, useState } from "react";
 import { Category } from "@/domain/categories/category";
 import { createScheduledTransactionAction } from "@/app/actions/scheduled-transaction-actions";
 import { initialActionState } from "@/app/actions/action-state";
-
-const buckets: Array<{ value: "NEEDS" | "WANTS" | "SAVINGS"; label: string }> = [
-  { value: "NEEDS", label: "Needs" },
-  { value: "WANTS", label: "Wants" },
-  { value: "SAVINGS", label: "Savings" },
-];
+import { bucketOptions, pickDefaultBucket, type BucketValue } from "@/components/forms/bucket-options";
 
 export function ScheduledTransactionForm({ categories }: { categories: Category[] }) {
-  const [bucket, setBucket] = useState<"NEEDS" | "WANTS" | "SAVINGS">("NEEDS");
+  const [bucket, setBucket] = useState<BucketValue>(() => pickDefaultBucket(categories));
   const [categoryId, setCategoryId] = useState("");
   const [state, formAction] = useActionState(createScheduledTransactionAction, initialActionState);
   const filteredCategories = useMemo(
@@ -61,10 +56,10 @@ export function ScheduledTransactionForm({ categories }: { categories: Category[
           <select
             name="bucket"
             value={bucket}
-            onChange={(event) => setBucket(event.target.value as typeof bucket)}
+            onChange={(event) => setBucket(event.target.value as BucketValue)}
             className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
           >
-            {buckets.map((option) => (
+            {bucketOptions.map((option) => (
               <option key={option.value} value={option.value} className="text-slate-900">
                 {option.label}
               </option>

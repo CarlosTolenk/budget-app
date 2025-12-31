@@ -59,14 +59,14 @@ export function TransactionsTabs({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex w-full gap-2 rounded-full border border-white/10 bg-white/5 p-1">
+      <div className="flex w-full flex-col gap-2 rounded-2xl border border-white/10 bg-white/5 p-1 sm:flex-row sm:rounded-full">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActive(tab.id)}
             className={clsx(
-              "flex-1 rounded-full px-4 py-2 text-sm font-semibold transition",
+              "basis-full rounded-full px-4 py-2 text-center text-sm font-semibold transition sm:flex-1 sm:basis-0 sm:min-w-0",
               active === tab.id ? "bg-white text-slate-900" : "text-slate-200 hover:bg-white/5",
             )}
           >
@@ -295,9 +295,9 @@ function ManualPanel({ manual, categories }: { manual: Transaction[]; categories
             <thead>
               <tr className="text-left text-xs uppercase tracking-wide text-slate-400">
                 <th className="pb-3 pr-4 font-medium">Descripción</th>
-                <th className="pb-3 pr-4 font-medium">Categoría</th>
-                <th className="pb-3 pr-4 font-medium">Origen</th>
-                <th className="pb-3 pr-4 font-medium">Fecha</th>
+                <th className="hidden pb-3 pr-4 font-medium sm:table-cell">Categoría</th>
+                <th className="hidden pb-3 pr-4 font-medium sm:table-cell">Origen</th>
+                <th className="hidden pb-3 pr-4 font-medium md:table-cell">Fecha</th>
                 <th className="pb-3 pr-4 font-medium text-right">Monto</th>
                 <th className="pb-3 text-right font-medium">Acciones</th>
               </tr>
@@ -308,24 +308,32 @@ function ManualPanel({ manual, categories }: { manual: Transaction[]; categories
                   ? categoryNameMap[transaction.categoryId] ?? "Sin categoría"
                   : "Sin categoría";
                 const sourceInfo = sourceDisplay[transaction.source] ?? sourceDisplay.MANUAL;
+                const sourceBadgeClass = clsx(
+                  "inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
+                  sourceInfo.badgeClass,
+                );
                 return (
                   <tr key={transaction.id} className="border-t border-white/5 text-sm last:border-b last:border-white/5">
                     <td className="py-3 pr-4 align-top">
                       <p className="font-semibold text-white">{transaction.merchant ?? "Sin descripción"}</p>
-                      <p className="text-xs text-slate-400">{transaction.bucket}</p>
+                      <p className="text-xs text-slate-400">
+                        {transaction.bucket}
+                        <span className="sm:hidden"> · {format(transaction.date, "dd MMM yyyy")}</span>
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-400 sm:hidden">
+                        <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-slate-300">
+                          {categoryLabel}
+                        </span>
+                        <span className={sourceBadgeClass}>{sourceInfo.label}</span>
+                      </div>
                     </td>
-                    <td className="py-3 pr-4 align-top text-slate-100">{categoryLabel}</td>
-                    <td className="py-3 pr-4 align-top">
-                      <span
-                        className={clsx(
-                          "inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
-                          sourceInfo.badgeClass,
-                        )}
-                      >
-                        {sourceInfo.label}
-                      </span>
+                    <td className="hidden py-3 pr-4 align-top text-slate-100 sm:table-cell">{categoryLabel}</td>
+                    <td className="hidden py-3 pr-4 align-top sm:table-cell">
+                      <span className={sourceBadgeClass}>{sourceInfo.label}</span>
                     </td>
-                    <td className="py-3 pr-4 align-top text-slate-100">{format(transaction.date, "dd MMM yyyy")}</td>
+                    <td className="hidden py-3 pr-4 align-top text-slate-100 md:table-cell">
+                      {format(transaction.date, "dd MMM yyyy")}
+                    </td>
                     <td
                       className={clsx(
                         "py-3 pr-4 text-right font-semibold",
@@ -342,7 +350,7 @@ function ManualPanel({ manual, categories }: { manual: Transaction[]; categories
               })}
               {!paginatedTransactions.length && (
                 <tr>
-                  <td colSpan={5} className="py-6 text-center text-sm text-slate-400">
+                  <td colSpan={6} className="py-6 text-center text-sm text-slate-400">
                     {manual.length
                       ? "No hay transacciones que coincidan con los filtros seleccionados."
                       : "Aún no tienes transacciones en este mes."}
