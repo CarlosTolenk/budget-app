@@ -90,7 +90,7 @@ export function ScheduledTransactionForm({ categories }: { categories: Category[
       <div className="grid gap-3 md:grid-cols-2">
         <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-slate-400">
           Fecha inicial
-          <input name="startDate" type="date" defaultValue={today} className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white" required />
+          <input name="startDate" type="date" defaultValue={today} className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white date-input" required />
         </label>
         <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-slate-400">
           Recurrencia

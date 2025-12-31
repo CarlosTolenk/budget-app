@@ -42,7 +42,7 @@ export function TransactionForm({ categories }: TransactionFormProps) {
           <input
             type="date"
             name="date"
-            className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
+            className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white date-input"
             defaultValue={today}
             required
           />

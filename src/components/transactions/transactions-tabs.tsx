@@ -245,7 +245,7 @@ function ManualPanel({ manual, categories }: { manual: Transaction[]; categories
                 setStartDate(event.target.value);
                 setPage(1);
               }}
-              className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white focus:border-white/40 focus:outline-none"
+              className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white focus:border-white/40 focus:outline-none date-input"
             />
           </label>
 
@@ -258,7 +258,7 @@ function ManualPanel({ manual, categories }: { manual: Transaction[]; categories
                 setEndDate(event.target.value);
                 setPage(1);
               }}
-              className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white focus:border-white/40 focus:outline-none"
+              className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white focus:border-white/40 focus:outline-none date-input"
             />
           </label>
 
@@ -698,7 +698,7 @@ function DraftCard({ draft, categories }: { draft: TransactionDraft; categories:
             <input type="hidden" name="draftId" value={draft.id} />
             <label className="flex flex-col gap-1 text-[11px] uppercase tracking-wide text-slate-400">
               Fecha
-              <input type="date" name="date" defaultValue={format(draft.date, "yyyy-MM-dd")} className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white" />
+              <input type="date" name="date" defaultValue={format(draft.date, "yyyy-MM-dd")} className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white date-input" />
             </label>
         <label className="flex flex-col gap-1 text-[11px] uppercase tracking-wide text-slate-400">
           Monto

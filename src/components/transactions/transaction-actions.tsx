@@ -96,7 +96,7 @@ export function TransactionActions({ transaction, categories }: TransactionActio
               type="date"
               name="date"
               defaultValue={format(transaction.date, "yyyy-MM-dd")}
-              className="rounded-lg border border-white/10 bg-white/10 px-3 py-1 text-white"
+              className="rounded-lg border border-white/10 bg-white/10 px-3 py-1 text-white date-input"
             />
           </label>
           <label className="flex flex-col gap-1 text-[11px] uppercase tracking-wide text-slate-400">
