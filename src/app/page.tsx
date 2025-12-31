@@ -176,7 +176,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 <div>
                   <p className="font-medium">{transaction.merchant}</p>
                   <p className="text-xs text-slate-400">
-                    {format(transaction.date, "dd MMM")} · {transaction.bucket}
+                    {format(transaction.date, "dd MMM")} · {bucketCopy[transaction.bucket]?.label ?? transaction.bucket}
                   </p>
                 </div>
                 <p
@@ -203,7 +203,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               >
                 <div>
                   <p className="font-medium">{category.name}</p>
-                  <p className="text-xs text-slate-400">{category.bucket}</p>
+                  <p className="text-xs text-slate-400">{bucketCopy[category.bucket]?.label ?? category.bucket}</p>
                   <p className="text-xs text-slate-300">
                     Plan {formatCurrency(category.idealMonthlyAmount ?? 0)} · Real{" "}
                     {formatCurrency(spendingByCategory[category.id] ?? 0)}

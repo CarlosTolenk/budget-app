@@ -7,12 +7,8 @@ import { initialActionState } from "@/app/actions/action-state";
 import { deleteCategoryAction, updateCategoryAction } from "@/app/actions/category-actions";
 import { formatCurrency } from "@/lib/format";
 import { ModalConfirmButton } from "@/components/ui/modal-confirm-button";
-
-const bucketOptions = [
-  { value: "NEEDS", label: "Needs" },
-  { value: "WANTS", label: "Wants" },
-  { value: "SAVINGS", label: "Savings" },
-] as const;
+import { bucketOptions } from "@/components/forms/bucket-options";
+import { bucketCopy } from "@/domain/value-objects/bucket";
 
 interface CategoryManagerProps {
   categories: Category[];
@@ -121,7 +117,7 @@ export function CategoryManager({ categories }: CategoryManagerProps) {
                 );
               }
 
-              const bucketLabel = bucketOptions.find((option) => option.value === category.bucket)?.label ?? category.bucket;
+              const bucketLabel = bucketCopy[category.bucket]?.label ?? category.bucket;
 
               return (
                 <li key={category.id} className="flex flex-col gap-2 rounded-xl border border-white/10 p-3 md:flex-row md:items-center md:justify-between">
@@ -164,7 +160,7 @@ export function CategoryManager({ categories }: CategoryManagerProps) {
             <p className="text-base font-semibold text-white">Eliminar categoría</p>
             <p className="mt-2 text-slate-300">
               ¿Seguro que deseas eliminar <span className="font-semibold text-white">{categoryToDelete.name}</span> del bucket{" "}
-              {categoryToDelete.bucket}? Esta acción no se puede deshacer.
+              {bucketCopy[categoryToDelete.bucket]?.label ?? categoryToDelete.bucket}? Esta acción no se puede deshacer.
             </p>
             {deleteState.status === "error" && deleteState.message && (
               <p className="mt-3 text-xs text-rose-300">{deleteState.message}</p>

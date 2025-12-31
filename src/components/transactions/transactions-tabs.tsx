@@ -17,12 +17,8 @@ import { initialActionState } from "@/app/actions/action-state";
 import { importEmailsAction } from "@/app/actions/import-email-actions";
 import { disconnectGmailAction } from "@/app/actions/gmail-credential-actions";
 import { useRouter } from "next/navigation";
-
-const bucketOptions = [
-  { value: "NEEDS", label: "Needs" },
-  { value: "WANTS", label: "Wants" },
-  { value: "SAVINGS", label: "Savings" },
-] as const;
+import { bucketOptions, type BucketValue } from "@/components/forms/bucket-options";
+import { bucketCopy } from "@/domain/value-objects/bucket";
 
 const sourceDisplay: Record<TransactionSource, { label: string; badgeClass: string }> = {
   MANUAL: { label: "Manual", badgeClass: "bg-slate-100/10 text-slate-100" },
@@ -92,7 +88,7 @@ export function TransactionsTabs({
 function ManualPanel({ manual, categories }: { manual: Transaction[]; categories: Category[] }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<"all" | string>("all");
-  const [bucketFilter, setBucketFilter] = useState<"all" | (typeof bucketOptions)[number]["value"]>("all");
+  const [bucketFilter, setBucketFilter] = useState<"all" | BucketValue>("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [minAmount, setMinAmount] = useState("");
@@ -222,7 +218,8 @@ function ManualPanel({ manual, categories }: { manual: Transaction[]; categories
             <select
               value={bucketFilter}
               onChange={(event) => {
-                setBucketFilter(event.target.value as typeof bucketFilter);
+                const value = event.target.value;
+                setBucketFilter(value === "all" ? "all" : (value as BucketValue));
                 setPage(1);
               }}
               className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white focus:border-white/40 focus:outline-none"
@@ -312,12 +309,13 @@ function ManualPanel({ manual, categories }: { manual: Transaction[]; categories
                   "inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
                   sourceInfo.badgeClass,
                 );
+                const bucketLabel = bucketCopy[transaction.bucket]?.label ?? transaction.bucket;
                 return (
                   <tr key={transaction.id} className="border-t border-white/5 text-sm last:border-b last:border-white/5">
                     <td className="py-3 pr-4 align-top">
                       <p className="font-semibold text-white">{transaction.merchant ?? "Sin descripción"}</p>
                       <p className="text-xs text-slate-400">
-                        {transaction.bucket}
+                        {bucketLabel}
                         <span className="sm:hidden"> · {format(transaction.date, "dd MMM yyyy")}</span>
                       </p>
                       <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-400 sm:hidden">
@@ -602,7 +600,7 @@ type ContactLike = { name?: string; email?: string };
 function DraftCard({ draft, categories }: { draft: TransactionDraft; categories: Category[] }) {
   const [approveState, approveAction] = useActionState(approveDraftAction, initialActionState);
   const [deleteState, deleteAction] = useActionState(deleteDraftAction, initialActionState);
-  const [bucket, setBucket] = useState<"NEEDS" | "WANTS" | "SAVINGS">(draft.bucket);
+  const [bucket, setBucket] = useState<BucketValue>(draft.bucket);
   const [categoryId, setCategoryId] = useState(draft.categoryId ?? "");
   const [isEditing, setIsEditing] = useState(false);
 
@@ -636,6 +634,7 @@ function DraftCard({ draft, categories }: { draft: TransactionDraft; categories:
   const adapterLabel = formatAdapterLabel(adapterValue, draft.source);
   const messageSubject = typeof subjectValue === "string" ? subjectValue : undefined;
   const messageSnippet = typeof snippetValue === "string" ? snippetValue : undefined;
+  const bucketLabel = bucketCopy[draft.bucket]?.label ?? draft.bucket;
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm">
@@ -643,7 +642,7 @@ function DraftCard({ draft, categories }: { draft: TransactionDraft; categories:
         <div>
           <p className="font-semibold">{draft.merchant ?? "Borrador sin descripción"}</p>
           <p className="text-xs text-slate-400">
-            {format(draft.date, "dd MMM yyyy")} · {draft.bucket} · {adapterLabel}
+            {format(draft.date, "dd MMM yyyy")} · {bucketLabel} · {adapterLabel}
           </p>
         </div>
         <div className="text-right">
@@ -715,7 +714,7 @@ function DraftCard({ draft, categories }: { draft: TransactionDraft; categories:
               <select
                 name="bucket"
                 value={bucket}
-                onChange={(event) => setBucket(event.target.value as typeof bucket)}
+                onChange={(event) => setBucket(event.target.value as BucketValue)}
                 className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
               >
                 {bucketOptions.map((option) => (

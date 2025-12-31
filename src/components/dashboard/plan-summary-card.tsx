@@ -12,16 +12,16 @@ interface PlanSummaryCardProps {
 }
 
 const SEGMENT_META = {
-  spent: { label: "Gasto real", strokeClass: "text-rose-400", dotClass: "bg-rose-400", valueClass: "text-rose-200" },
+  spent: { label: "Gasto ejecutado", strokeClass: "text-rose-400", dotClass: "bg-rose-400", valueClass: "text-rose-200" },
   planRemaining: {
-    label: "Disponible del plan",
+    label: "Saldo del plan",
     strokeClass: "text-emerald-300",
     dotClass: "bg-emerald-300",
     valueClass: "text-emerald-200",
   },
-  unassigned: { label: "Meta por asignar", strokeClass: "text-sky-300", dotClass: "bg-sky-300", valueClass: "text-sky-200" },
+  unassigned: { label: "Pendiente por asignar", strokeClass: "text-sky-300", dotClass: "bg-sky-300", valueClass: "text-sky-200" },
   overspend: {
-    label: "Exceso sobre el plan",
+    label: "Exceso del plan",
     strokeClass: "text-orange-400",
     dotClass: "bg-orange-400",
     valueClass: "text-orange-200",
@@ -30,9 +30,14 @@ const SEGMENT_META = {
 
 export function PlanSummaryCard({ planned, spent, target, planDelta, planVsTarget, targetDelta }: PlanSummaryCardProps) {
   const planRemaining = Math.max(planDelta, 0);
+  const planOver = Math.max(-planDelta, 0);
   const unassigned = Math.max(planVsTarget, 0);
   const overspend = Math.max(spent - planned, 0);
+  const targetBalance = Math.max(targetDelta, 0);
+  const targetShortfall = Math.max(-targetDelta, 0);
   const clampedSpent = Math.max(Math.min(spent, target), 0);
+  const executionRate = planned > 0 ? Math.min((spent / planned) * 100, 999) : 0;
+  const planCoverageRate = target > 0 ? Math.min((planned / target) * 100, 999) : 0;
   const baseEntries = [
     { key: "spent", value: clampedSpent, ...SEGMENT_META.spent },
     { key: "planRemaining", value: planRemaining, ...SEGMENT_META.planRemaining },
@@ -58,6 +63,7 @@ export function PlanSummaryCard({ planned, spent, target, planDelta, planVsTarge
                 const dashArray = `${length} ${circumference - length}`;
                 const dashOffset = circumference * (cumulative / total);
                 cumulative += segment.value;
+                const tooltip = `${segment.label}: ${formatCurrency(segment.value)}`;
                 return (
                   <circle
                     key={segment.key}
@@ -69,18 +75,19 @@ export function PlanSummaryCard({ planned, spent, target, planDelta, planVsTarge
                     strokeLinecap="round"
                     strokeDasharray={dashArray}
                     strokeDashoffset={-dashOffset}
-                  className={segment.strokeClass}
-                  stroke="currentColor"
-                />
-              );
-            })}
-          </svg>
+                    className={segment.strokeClass}
+                    stroke="currentColor"
+                    aria-label={tooltip}
+                    title={tooltip}
+                  />
+                );
+              })}
+            </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-sm text-slate-300">
-              <p className="text-xs uppercase tracking-wide">Meta usada</p>
+              <p className="text-xs uppercase tracking-wide">Avance de la meta</p>
               <p className="text-2xl font-semibold text-white">
                 {target > 0 ? `${Math.min((spent / target) * 100, 999).toFixed(0)}%` : "0%"}
               </p>
-              <p className="text-xs text-slate-400">{formatCurrency(spent)}</p>
             </div>
           </div>
           <ul className="grid w-full gap-3 text-sm sm:grid-cols-2">
@@ -99,25 +106,55 @@ export function PlanSummaryCard({ planned, spent, target, planDelta, planVsTarge
         </div>
         <div className="w-full space-y-3 text-sm text-slate-300 lg:max-w-sm">
           <div>
-            <p className="text-xs uppercase tracking-wide text-slate-400">Plan total</p>
+            <p className="text-xs uppercase tracking-wide text-slate-400">Plan registrado</p>
             <p className="text-xl font-semibold text-white">{formatCurrency(planned)}</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-wide text-slate-400">Gasto real</p>
+            <p className="text-xs uppercase tracking-wide text-slate-400">Gasto ejecutado</p>
             <p className="text-xl font-semibold text-white">{formatCurrency(spent)}</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-wide text-slate-400">Meta combinada</p>
+            <p className="text-xs uppercase tracking-wide text-slate-400">Meta 50/30/20</p>
             <p className="text-xl font-semibold text-white">{formatCurrency(target)}</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Stat label="Disponible del plan" value={planDelta} tone="positive" />
-            <Stat label="Meta por asignar" value={planVsTarget} tone="info" />
-            <Stat label="Disponible de la meta" value={targetDelta} tone="positive" />
-            <Stat label="Exceso sobre el plan" value={overspend} tone="negative" />
+            <Stat
+              label="Ejecución del plan"
+              value={executionRate}
+              tone={executionRate <= 100 ? "positive" : "negative"}
+              format="percent"
+              note={
+                planned === 0
+                  ? undefined
+                  : executionRate <= 100
+                    ? `Aún disponible ${formatCurrency(planRemaining)}`
+                    : `Sobreplan ${formatCurrency(planOver)}`
+              }
+            />
+            <Stat
+              label="Plan cubierto vs meta"
+              value={planCoverageRate}
+              tone={planCoverageRate >= 100 ? "positive" : "info"}
+              format="percent"
+              note={planCoverageRate >= 100 ? "Tu plan cubre toda la meta." : `Sin asignar ${formatCurrency(unassigned)}`}
+            />
+            <Stat
+              label="Brecha contra plan"
+              value={planDelta}
+              tone={planDelta >= 0 ? "positive" : "negative"}
+              note={planDelta >= 0 ? "Aún tienes margen." : `Sobreplan ${formatCurrency(Math.abs(planDelta))}`}
+            />
+            <Stat
+              label="Brecha contra meta"
+              value={targetDelta}
+              tone={targetDelta >= 0 ? "positive" : "negative"}
+              note={
+                targetDelta >= 0 ? `Restan ${formatCurrency(targetBalance)} para la meta.` : `Meta excedida ${formatCurrency(targetShortfall)}`
+              }
+            />
           </div>
           <p className="text-xs text-slate-400">
-            El “Exceso sobre el plan” aparece cuando el gasto real supera lo que habías planificado para este mes. Mientras siga en
+            El “Exceso del plan” aparece cuando el gasto ejecutado supera lo que habías planificado para este mes. Mientras siga en
             0, vas dentro del plan.
           </p>
         </div>
@@ -126,13 +163,28 @@ export function PlanSummaryCard({ planned, spent, target, planDelta, planVsTarge
   );
 }
 
-function Stat({ label, value, tone }: { label: string; value: number; tone: "positive" | "negative" | "info" }) {
+function Stat({
+  label,
+  value,
+  tone,
+  note,
+  format = "currency",
+}: {
+  label: string;
+  value: number;
+  tone: "positive" | "negative" | "info";
+  note?: string;
+  format?: "currency" | "percent";
+}) {
   const toneClass =
     tone === "positive" ? "text-emerald-300" : tone === "negative" ? "text-rose-300" : "text-sky-300";
+  const formattedValue =
+    format === "currency" ? formatCurrency(value) : `${value.toFixed(0)}%`;
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-3">
       <p className="text-[11px] uppercase tracking-wide text-slate-400">{label}</p>
-      <p className={`text-lg font-semibold ${toneClass}`}>{formatCurrency(Math.abs(value))}</p>
+      <p className={`text-lg font-semibold ${toneClass}`}>{formattedValue}</p>
+      {note ? <p className="text-xs text-slate-400">{note}</p> : null}
     </div>
   );
 }

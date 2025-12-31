@@ -4,18 +4,18 @@ export const bucketOrder: Bucket[] = ["NEEDS", "WANTS", "SAVINGS"];
 
 export const bucketCopy: Record<Bucket, { label: string; description: string; targetRatio: number }> = {
   NEEDS: {
-    label: "Needs",
-    description: "Expenses you must cover to live (50%)",
+    label: "Necesarios",
+    description: "Gastos básicos para vivir (50%)",
     targetRatio: 0.5,
   },
   WANTS: {
-    label: "Wants",
-    description: "Lifestyle choices and fun (30%)",
+    label: "Prescindibles",
+    description: "Gustos y estilo de vida (30%)",
     targetRatio: 0.3,
   },
   SAVINGS: {
-    label: "Savings",
-    description: "Goals, debt payoff, safety net (20%)",
+    label: "Ahorro",
+    description: "Metas, deudas y colchón (20%)",
     targetRatio: 0.2,
   },
 };

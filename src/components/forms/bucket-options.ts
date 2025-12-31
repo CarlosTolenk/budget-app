@@ -1,10 +1,10 @@
 import { Category } from "@/domain/categories/category";
+import { bucketCopy, bucketOrder, type Bucket } from "@/domain/value-objects/bucket";
 
-export const bucketOptions = [
-  { value: "NEEDS", label: "Needs" },
-  { value: "WANTS", label: "Wants" },
-  { value: "SAVINGS", label: "Savings" },
-] as const;
+export const bucketOptions = bucketOrder.map((bucket) => ({
+  value: bucket,
+  label: bucketCopy[bucket].label,
+})) as ReadonlyArray<{ value: Bucket; label: string }>;
 
 export type BucketValue = (typeof bucketOptions)[number]["value"];
 

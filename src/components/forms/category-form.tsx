@@ -3,12 +3,7 @@
 import { useActionState } from "react";
 import { createCategoryAction } from "@/app/actions/category-actions";
 import { initialActionState } from "@/app/actions/action-state";
-
-const buckets = [
-  { value: "NEEDS", label: "Needs" },
-  { value: "WANTS", label: "Wants" },
-  { value: "SAVINGS", label: "Savings" },
-];
+import { bucketOptions } from "@/components/forms/bucket-options";
 
 export function CategoryForm() {
   const [state, formAction] = useActionState(createCategoryAction, initialActionState);
@@ -32,7 +27,7 @@ export function CategoryForm() {
           className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
           defaultValue="NEEDS"
         >
-          {buckets.map((bucket) => (
+          {bucketOptions.map((bucket) => (
             <option key={bucket.value} value={bucket.value} className="text-slate-900">
               {bucket.label}
             </option>

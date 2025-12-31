@@ -9,12 +9,7 @@ import { updateTransactionAction } from "@/app/actions/update-transaction-action
 import { initialActionState, type ActionState } from "@/app/actions/action-state";
 import { format } from "date-fns";
 import { ModalConfirmButton } from "@/components/ui/modal-confirm-button";
-
-const buckets = [
-  { value: "NEEDS", label: "Needs" },
-  { value: "WANTS", label: "Wants" },
-  { value: "SAVINGS", label: "Savings" },
-];
+import { bucketOptions, type BucketValue } from "@/components/forms/bucket-options";
 
 interface TransactionActionsProps {
   transaction: Transaction;
@@ -32,7 +27,7 @@ export function TransactionActions({ transaction, categories }: TransactionActio
   };
   const [formState, formAction] = useActionState(enhancedUpdateAction, initialActionState);
   const [deleteState, deleteAction] = useActionState(deleteTransactionAction, initialActionState);
-  const [bucket, setBucket] = useState<"NEEDS" | "WANTS" | "SAVINGS">(transaction.bucket);
+  const [bucket, setBucket] = useState<BucketValue>(transaction.bucket);
   const [categoryId, setCategoryId] = useState(transaction.categoryId ?? "");
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
 
@@ -114,12 +109,12 @@ export function TransactionActions({ transaction, categories }: TransactionActio
             <select
               name="bucket"
               value={bucket}
-              onChange={(event) => setBucket(event.target.value as typeof bucket)}
+              onChange={(event) => setBucket(event.target.value as BucketValue)}
               className="rounded-lg border border-white/10 bg-white/10 px-3 py-1 text-white"
             >
-              {buckets.map((bucket) => (
-                <option key={bucket.value} value={bucket.value} className="text-slate-900">
-                  {bucket.label}
+              {bucketOptions.map((option) => (
+                <option key={option.value} value={option.value} className="text-slate-900">
+                  {option.label}
                 </option>
               ))}
             </select>
