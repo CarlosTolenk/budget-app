@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { formatCurrency } from "@/lib/format";
 
 interface PlanSummaryCardProps {
@@ -29,6 +30,7 @@ const SEGMENT_META = {
 } as const;
 
 export function PlanSummaryCard({ planned, spent, target, planDelta, planVsTarget, targetDelta }: PlanSummaryCardProps) {
+  const [hoveredSegment, setHoveredSegment] = useState<string | null>(null);
   const planRemaining = Math.max(planDelta, 0);
   const planOver = Math.max(-planDelta, 0);
   const unassigned = Math.max(planVsTarget, 0);
@@ -50,6 +52,8 @@ export function PlanSummaryCard({ planned, spent, target, planDelta, planVsTarge
   const radius = 70;
   const circumference = 2 * Math.PI * radius;
   let cumulative = 0;
+
+  const hoveredInfo = segments.find((segment) => segment.key === hoveredSegment) ?? null;
 
   return (
     <article className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
@@ -78,7 +82,10 @@ export function PlanSummaryCard({ planned, spent, target, planDelta, planVsTarge
                     className={segment.strokeClass}
                     stroke="currentColor"
                     aria-label={tooltip}
-                    title={tooltip}
+                    onMouseEnter={() => setHoveredSegment(segment.key)}
+                    onFocus={() => setHoveredSegment(segment.key)}
+                    onMouseLeave={() => setHoveredSegment((current) => (current === segment.key ? null : current))}
+                    onBlur={() => setHoveredSegment((current) => (current === segment.key ? null : current))}
                   />
                 );
               })}
@@ -89,6 +96,12 @@ export function PlanSummaryCard({ planned, spent, target, planDelta, planVsTarge
                 {target > 0 ? `${Math.min((spent / target) * 100, 999).toFixed(0)}%` : "0%"}
               </p>
             </div>
+            {hoveredInfo ? (
+              <div className="pointer-events-none absolute -bottom-6 left-1/2 z-10 w-max -translate-x-1/2 rounded-lg border border-white/20 bg-slate-950/80 px-3 py-2 text-center text-xs text-white shadow-lg">
+                <p className="font-semibold">{hoveredInfo.label}</p>
+                <p className="text-slate-300">{formatCurrency(hoveredInfo.value)}</p>
+              </div>
+            ) : null}
           </div>
           <ul className="grid w-full gap-3 text-sm sm:grid-cols-2">
             {baseEntries.map((segment) => (
