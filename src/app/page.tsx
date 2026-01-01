@@ -194,7 +194,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
         <article className="flex h-[420px] flex-col rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
           <h2 className="text-xl font-semibold">Categorías</h2>
-          <p className="text-sm text-slate-300">Resumen de buckets</p>
+          <p className="text-sm text-slate-300">Resumen de renglones</p>
           <ul className="mt-4 flex-1 space-y-3 overflow-y-auto pr-2">
             {categories.map((category) => (
               <li

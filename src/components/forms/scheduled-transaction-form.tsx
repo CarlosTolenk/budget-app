@@ -52,7 +52,7 @@ export function ScheduledTransactionForm({ categories }: { categories: Category[
       </label>
       <div className="grid gap-3 md:grid-cols-2">
         <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-slate-400">
-          Bucket
+          Renglón
           <select
             name="bucket"
             value={bucket}
@@ -101,7 +101,7 @@ export function ScheduledTransactionForm({ categories }: { categories: Category[
       </div>
       {!filteredCategories.length ? (
         <p className="text-xs text-rose-300">
-          Este bucket no tiene categorías configuradas. Crea una antes de programar el débito.
+          Este renglón no tiene categorías configuradas. Crea una antes de programar el débito.
         </p>
       ) : null}
       {state.message && (

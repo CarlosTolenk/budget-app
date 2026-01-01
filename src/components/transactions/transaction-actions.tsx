@@ -105,7 +105,7 @@ export function TransactionActions({ transaction, categories }: TransactionActio
             />
           </label>
           <label className="flex flex-col gap-1 text-[11px] uppercase tracking-wide text-slate-400">
-            Bucket
+            Renglón
             <select
               name="bucket"
               value={bucket}
@@ -140,7 +140,7 @@ export function TransactionActions({ transaction, categories }: TransactionActio
             </select>
           </label>
           {!filteredCategories.length ? (
-            <p className="text-[11px] text-rose-300">Este bucket no tiene categorías disponibles.</p>
+            <p className="text-[11px] text-rose-300">Este renglón no tiene categorías disponibles.</p>
           ) : null}
           <button
             className="w-full rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-slate-900 disabled:cursor-not-allowed disabled:bg-white/20"

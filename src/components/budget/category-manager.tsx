@@ -50,7 +50,7 @@ export function CategoryManager({ categories }: CategoryManagerProps) {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold">Editar categorías</h2>
-          <p className="text-sm text-slate-300">Actualiza el nombre, bucket o monto ideal para reequilibrar tu presupuesto.</p>
+          <p className="text-sm text-slate-300">Actualiza el nombre, renglón o monto ideal para reequilibrar tu presupuesto.</p>
         </div>
         <span className="text-sm text-slate-400">{sorted.length} en total</span>
       </div>
@@ -76,7 +76,7 @@ export function CategoryManager({ categories }: CategoryManagerProps) {
                         />
                       </label>
                       <label className="text-[11px] uppercase tracking-wide text-slate-400">
-                        Bucket
+                        Renglón
                         <select
                           name="bucket"
                           defaultValue={category.bucket}
@@ -159,7 +159,7 @@ export function CategoryManager({ categories }: CategoryManagerProps) {
           <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900/90 p-6 text-sm shadow-2xl" role="dialog" aria-modal="true">
             <p className="text-base font-semibold text-white">Eliminar categoría</p>
             <p className="mt-2 text-slate-300">
-              ¿Seguro que deseas eliminar <span className="font-semibold text-white">{categoryToDelete.name}</span> del bucket{" "}
+              ¿Seguro que deseas eliminar <span className="font-semibold text-white">{categoryToDelete.name}</span> del renglón{" "}
               {bucketCopy[categoryToDelete.bucket]?.label ?? categoryToDelete.bucket}? Esta acción no se puede deshacer.
             </p>
             {deleteState.status === "error" && deleteState.message && (

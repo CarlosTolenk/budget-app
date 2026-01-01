@@ -89,7 +89,7 @@ export default async function BudgetPage({ searchParams }: BudgetPageProps) {
       </section>
 
       <section className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
-        <h2 className="text-xl font-semibold">Categorías por bucket</h2>
+        <h2 className="text-xl font-semibold">Categorías por renglón</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           {(Object.keys(bucketCopy) as Array<keyof typeof bucketCopy>).map((bucket) => {
             const bucketCategories = byBucket[bucket] ?? [];

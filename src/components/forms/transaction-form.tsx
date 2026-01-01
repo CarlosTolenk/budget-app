@@ -80,7 +80,7 @@ export function TransactionForm({ categories }: TransactionFormProps) {
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-slate-400">
-          Bucket
+          Renglón
           <select
             name="bucket"
             className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
@@ -117,7 +117,7 @@ export function TransactionForm({ categories }: TransactionFormProps) {
       </div>
       {!bucketCategories.length ? (
         <p className="text-xs text-rose-300">
-          Este bucket no tiene categorías asignadas. Crea una en la pantalla de Presupuesto antes de registrar gastos aquí.
+          Este renglón no tiene categorías asignadas. Crea una en la pantalla de Presupuesto antes de registrar gastos aquí.
         </p>
       ) : null}
       {state.message && (

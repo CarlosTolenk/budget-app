@@ -21,7 +21,7 @@ export function CategoryForm() {
         />
       </label>
       <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-slate-400">
-        Bucket
+        Renglón
         <select
           name="bucket"
           className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"

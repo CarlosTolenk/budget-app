@@ -214,7 +214,7 @@ function ManualPanel({ manual, categories }: { manual: Transaction[]; categories
           </label>
 
           <label className="text-xs text-slate-300">
-            Bucket
+            Renglón
             <select
               value={bucketFilter}
               onChange={(event) => {
@@ -710,7 +710,7 @@ function DraftCard({ draft, categories }: { draft: TransactionDraft; categories:
           />
         </label>
             <label className="flex flex-col gap-1 text-[11px] uppercase tracking-wide text-slate-400">
-              Bucket
+              Renglón
               <select
                 name="bucket"
                 value={bucket}
@@ -755,7 +755,7 @@ function DraftCard({ draft, categories }: { draft: TransactionDraft; categories:
             <div className="md:col-span-2 space-y-2">
               {!bucketCategories.length ? (
                 <p className="text-xs text-rose-300">
-                  Este bucket no tiene categorías. Asegúrate de definirlas en Presupuesto antes de aprobar este gasto.
+                  Este renglón no tiene categorías. Asegúrate de definirlas en Presupuesto antes de aprobar este gasto.
                 </p>
               ) : null}
               <div className="flex flex-col gap-2 md:flex-row">
