@@ -37,6 +37,10 @@ export class EmailIngestionService {
       this.ruleRepository.listAll(userId),
     ]);
 
+    console.log(`Found ${messages.length} messages`);
+    console.log(messages)
+
+
     const errors: EmailIngestionResult["errors"] = [];
     const toPersist: CreateDraftInput[] = [];
 

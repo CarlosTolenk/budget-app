@@ -29,6 +29,7 @@ import { MemoryIncomeRepository } from "@/infrastructure/repositories/memory/mem
 import { GmailProvider } from "@/infrastructure/email/gmail-provider";
 import { GenericBankAdapter } from "@/modules/email-ingestion/adapters/generic-bank-adapter";
 import { BancoPopularAdapter } from "@/modules/email-ingestion/adapters/banco-popular-adapter";
+import { BancoSantaCruzAdapter } from "@/modules/email-ingestion/adapters/banco-santa-cruz-adapter";
 import { AsociacionCibaoAdapter } from "@/modules/email-ingestion/adapters/asociacion-cibao-adapter";
 import { QikAdapter } from "@/modules/email-ingestion/adapters/qik-adapter";
 import { EmailIngestionService } from "@/modules/email-ingestion/services/email-ingestion-service";
@@ -127,7 +128,13 @@ export function serverContainer(): ServerContainer {
     fallbackProvider: fallbackEmailProvider,
   });
   const emailIngestionService = new EmailIngestionService(
-    [new BancoPopularAdapter(), new AsociacionCibaoAdapter(), new QikAdapter(), new GenericBankAdapter()],
+    [
+      new BancoPopularAdapter(),
+      new BancoSantaCruzAdapter(),
+      new AsociacionCibaoAdapter(),
+      new QikAdapter(),
+      new GenericBankAdapter(),
+    ],
     transactionRepository,
     draftRepository,
     categoryRepository,
