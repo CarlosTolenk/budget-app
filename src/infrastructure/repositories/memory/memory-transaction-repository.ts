@@ -11,6 +11,12 @@ export class MemoryTransactionRepository implements TransactionRepository {
       .sort((a, b) => b.date.getTime() - a.date.getTime());
   }
 
+  async findAll(userId: string): Promise<Transaction[]> {
+    return this.transactions
+      .filter((transaction) => transaction.userId === userId)
+      .sort((a, b) => b.date.getTime() - a.date.getTime());
+  }
+
   async findRecent(limit: number, userId: string): Promise<Transaction[]> {
     return this.transactions
       .filter((transaction) => transaction.userId === userId)

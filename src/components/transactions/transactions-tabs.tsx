@@ -2,7 +2,7 @@
 
 import { useActionState, useMemo, useState, useTransition } from "react";
 import clsx from "clsx";
-import { format } from "date-fns";
+import { format, startOfMonth } from "date-fns";
 import { Category } from "@/domain/categories/category";
 import { Transaction, TransactionSource } from "@/domain/transactions/transaction";
 import { ScheduledTransaction } from "@/domain/scheduled-transactions/scheduled-transaction";
@@ -89,8 +89,8 @@ function ManualPanel({ manual, categories }: { manual: Transaction[]; categories
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<"all" | string>("all");
   const [bucketFilter, setBucketFilter] = useState<"all" | BucketValue>("all");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [startDate, setStartDate] = useState(() => format(startOfMonth(new Date()), "yyyy-MM-dd"));
+  const [endDate, setEndDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [minAmount, setMinAmount] = useState("");
   const [maxAmount, setMaxAmount] = useState("");
   const [page, setPage] = useState(1);

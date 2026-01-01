@@ -21,6 +21,15 @@ export class PrismaTransactionRepository implements TransactionRepository {
     return records.map(this.mapTransaction);
   }
 
+  async findAll(userId: string): Promise<Transaction[]> {
+    const records = await prisma.transaction.findMany({
+      where: { userId },
+      orderBy: { date: "desc" },
+    });
+
+    return records.map(this.mapTransaction);
+  }
+
   async findRecent(limit: number, userId: string): Promise<Transaction[]> {
     const records = await prisma.transaction.findMany({
       where: { userId },

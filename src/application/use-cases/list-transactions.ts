@@ -6,14 +6,19 @@ interface ListTransactionsInput {
   userId: string;
   monthId?: string;
   limit?: number;
+  scope?: "month" | "all";
 }
 
 export class ListTransactionsUseCase {
   constructor(private readonly transactionRepository: TransactionRepository) {}
 
-  async execute({ userId, monthId, limit }: ListTransactionsInput): Promise<Transaction[]> {
+  async execute({ userId, monthId, limit, scope = "month" }: ListTransactionsInput): Promise<Transaction[]> {
     if (limit) {
       return this.transactionRepository.findRecent(limit, userId);
+    }
+
+    if (scope === "all") {
+      return this.transactionRepository.findAll(userId);
     }
 
     const resolvedMonthId = monthId ?? format(new Date(), "yyyy-MM");

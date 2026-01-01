@@ -28,7 +28,7 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
         : undefined;
 
   const [transactions, categories, scheduled, drafts, gmailCredential] = await Promise.all([
-    container.listTransactionsUseCase.execute({ userId }),
+    container.listTransactionsUseCase.execute({ userId, scope: "all" }),
     container.listCategoriesUseCase.execute(userId),
     container.listScheduledTransactionsUseCase.execute(userId),
     container.listTransactionDraftsUseCase.execute(userId),
