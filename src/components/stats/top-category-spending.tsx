@@ -67,40 +67,42 @@ export function TopCategorySpending({ categories }: TopCategorySpendingProps) {
         </span>
       </div>
 
-      <div className="mt-6 flex flex-col gap-6 md:flex-row">
-        <ul className="space-y-4 md:w-1/2">
-          {categories.map((category) => {
-            const bucket = category.bucket ? bucketCopy[category.bucket] : undefined;
-            const width = (category.total / maxCategoryTotal) * 100;
-            const isActive = selectedCategory?.id === category.id;
-            return (
-              <li key={category.id}>
-                <button
-                  type="button"
-                  aria-pressed={isActive}
-                  onClick={() => setSelectedCategoryId(category.id)}
-                  className={clsx(
-                    "w-full rounded-2xl border border-transparent px-4 py-3 text-left transition",
-                    isActive ? "border-rose-300/50 bg-white/15" : "hover:bg-white/5",
-                  )}
-                >
-                  <div className="flex items-center justify-between text-sm">
-                    <div>
-                      <p className="font-semibold">{category.name}</p>
-                      {bucket && (
-                        <span className="text-[11px] uppercase tracking-wide text-slate-400">{bucket.label}</span>
-                      )}
+      <div className="mt-6 flex flex-col gap-6 md:flex-row md:items-start">
+        <div className="md:w-1/2">
+          <ul className="space-y-4 max-h-[420px] overflow-y-auto pr-2">
+            {categories.map((category) => {
+              const bucket = category.bucket ? bucketCopy[category.bucket] : undefined;
+              const width = (category.total / maxCategoryTotal) * 100;
+              const isActive = selectedCategory?.id === category.id;
+              return (
+                <li key={category.id}>
+                  <button
+                    type="button"
+                    aria-pressed={isActive}
+                    onClick={() => setSelectedCategoryId(category.id)}
+                    className={clsx(
+                      "w-full rounded-2xl border border-transparent px-4 py-3 text-left transition",
+                      isActive ? "border-rose-300/50 bg-white/15" : "hover:bg-white/5",
+                    )}
+                  >
+                    <div className="flex items-center justify-between text-sm">
+                      <div>
+                        <p className="font-semibold">{category.name}</p>
+                        {bucket && (
+                          <span className="text-[11px] uppercase tracking-wide text-slate-400">{bucket.label}</span>
+                        )}
+                      </div>
+                      <p className="text-sm text-white">{formatCurrency(category.total)}</p>
                     </div>
-                    <p className="text-sm text-white">{formatCurrency(category.total)}</p>
-                  </div>
-                  <div className="mt-2 h-3 rounded-full bg-white/10">
-                    <div className="h-3 rounded-full bg-rose-400/80" style={{ width: `${Math.min(width, 100)}%` }} />
-                  </div>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+                    <div className="mt-2 h-3 rounded-full bg-white/10">
+                      <div className="h-3 rounded-full bg-rose-400/80" style={{ width: `${Math.min(width, 100)}%` }} />
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
 
         {selectedCategory && (
           <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-5 md:w-1/2">
