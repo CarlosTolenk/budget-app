@@ -23,7 +23,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       <div>
         <p className="text-sm uppercase tracking-wide text-slate-400">Acceso privado</p>
         <h1 className="text-3xl font-semibold text-white">Inicia sesión</h1>
-        <p className="text-sm text-slate-400">Autentícate con el usuario creado en Supabase Auth.</p>
+        <p className="text-sm text-slate-400">Autentícate con el usuario creado por el administrador.</p>
       </div>
       <LoginForm redirectTo={redirectToParam} />
     </div>

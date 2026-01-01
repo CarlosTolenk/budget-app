@@ -6,7 +6,7 @@ export default function AppLoading() {
       <div className="h-10 w-10 animate-spin rounded-full border-2 border-white/20 border-t-emerald-400" />
       <div>
         <p className="text-base font-medium text-white">Cargando dashboard…</p>
-        <p className="text-xs text-slate-400">Consultando Supabase y preparando gráficas.</p>
+        <p className="text-xs text-slate-400">Consultando la base de datos y preparando gráficas.</p>
       </div>
     </div>
   );
