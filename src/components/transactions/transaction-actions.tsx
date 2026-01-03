@@ -27,7 +27,7 @@ export function TransactionActions({ transaction, categories }: TransactionActio
   };
   const [formState, formAction] = useActionState(enhancedUpdateAction, initialActionState);
   const [deleteState, deleteAction] = useActionState(deleteTransactionAction, initialActionState);
-  const [bucket, setBucket] = useState<BucketValue>(transaction.bucket);
+  const [bucket, setBucket] = useState<BucketValue>(transaction.bucket ?? "NEEDS");
   const [categoryId, setCategoryId] = useState(transaction.categoryId ?? "");
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
 

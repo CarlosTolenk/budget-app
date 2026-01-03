@@ -7,6 +7,7 @@ interface UpdateRuleInput {
   pattern: string;
   priority?: number;
   categoryId: string;
+  userBucketId: string;
 }
 
 export class UpdateRuleUseCase {
@@ -19,6 +20,7 @@ export class UpdateRuleUseCase {
       pattern: input.pattern.trim(),
       priority: input.priority ?? 0,
       categoryId: input.categoryId,
+      userBucketId: input.userBucketId,
     });
   }
 }

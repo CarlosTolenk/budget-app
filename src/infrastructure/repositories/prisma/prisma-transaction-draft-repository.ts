@@ -1,4 +1,4 @@
-import { Prisma, TransactionDraft as PrismaDraft } from "@prisma/client";
+import { Prisma, TransactionDraft as PrismaDraft, UserBucket } from "@prisma/client";
 import { TransactionDraftRepository } from "@/domain/repositories";
 import { CreateDraftInput, TransactionDraft } from "@/domain/transaction-drafts/transaction-draft";
 import { prisma } from "@/infrastructure/db/prisma-client";
@@ -117,7 +117,7 @@ export class PrismaTransactionDraftRepository implements TransactionDraftReposit
     }
   }
 
-  private map(record: PrismaDraft & { userBucket: Prisma.UserBucket }): TransactionDraft | null {
+  private map(record: PrismaDraft & { userBucket: UserBucket }): TransactionDraft | null {
     const amount = this.parseAmount(record.amount);
     if (amount === null) {
       return null;

@@ -6,6 +6,7 @@ interface CreateRuleInput {
   pattern: string;
   priority?: number;
   categoryId: string;
+  userBucketId: string;
 }
 
 export class CreateRuleUseCase {
@@ -17,6 +18,7 @@ export class CreateRuleUseCase {
       pattern: input.pattern.trim(),
       priority: input.priority ?? 0,
       categoryId: input.categoryId,
+      userBucketId: input.userBucketId,
     });
   }
 }

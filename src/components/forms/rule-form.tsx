@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { createRuleAction } from "@/app/actions/rule-actions";
 import { initialActionState } from "@/app/actions/action-state";
 import { Category } from "@/domain/categories/category";
+import { bucketOptions, type BucketValue } from "@/components/forms/bucket-options";
 
 interface RuleFormProps {
   categories: Category[];
@@ -11,6 +12,24 @@ interface RuleFormProps {
 
 export function RuleForm({ categories }: RuleFormProps) {
   const [state, formAction] = useActionState(createRuleAction, initialActionState);
+  const [bucket, setBucket] = useState<BucketValue>("NEEDS");
+  const [categoryId, setCategoryId] = useState("");
+  const filteredCategories = useMemo(() => {
+    const available = categories.filter((category) => category.bucket === bucket);
+    if (available.length === 0) {
+      return categories.filter((category) => category.bucket);
+    }
+    return available;
+  }, [categories, bucket]);
+  const resolvedCategoryId = useMemo(() => {
+    if (!filteredCategories.length) {
+      return "";
+    }
+    if (categoryId && filteredCategories.some((category) => category.id === categoryId)) {
+      return categoryId;
+    }
+    return filteredCategories[0]?.id ?? "";
+  }, [filteredCategories, categoryId]);
 
   return (
     <form action={formAction} className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm">
@@ -34,16 +53,35 @@ export function RuleForm({ categories }: RuleFormProps) {
         />
       </label>
       <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-slate-400">
+        Renglón
+        <select
+          name="bucket"
+          className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
+          value={bucket}
+          onChange={(event) => setBucket(event.target.value as BucketValue)}
+          required
+        >
+          {bucketOptions.map((option) => (
+            <option key={option.value} value={option.value} className="text-slate-900">
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-slate-400">
         Categoría
         <select
           name="categoryId"
           className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
-          required
+          disabled={!filteredCategories.length}
+          required={filteredCategories.length > 0}
+          value={resolvedCategoryId}
+          onChange={(event) => setCategoryId(event.target.value)}
         >
           <option value="" disabled>
             Selecciona una categoría
           </option>
-          {categories.map((category) => (
+          {filteredCategories.map((category) => (
             <option key={category.id} value={category.id} className="text-slate-900">
               {category.name}
             </option>

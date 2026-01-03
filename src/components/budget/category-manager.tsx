@@ -79,7 +79,7 @@ export function CategoryManager({ categories }: CategoryManagerProps) {
                         Renglón
                         <select
                           name="bucket"
-                          defaultValue={category.bucket}
+                          defaultValue={category.bucket ?? "NEEDS"}
                           className="mt-1 rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
                         >
                           {bucketOptions.map((option) => (
@@ -117,7 +117,7 @@ export function CategoryManager({ categories }: CategoryManagerProps) {
                 );
               }
 
-              const bucketLabel = bucketCopy[category.bucket]?.label ?? category.bucket;
+              const bucketLabel = category.bucket ? bucketCopy[category.bucket]?.label ?? category.bucket : "Sin renglón";
 
               return (
                 <li key={category.id} className="flex flex-col gap-2 rounded-xl border border-white/10 p-3 md:flex-row md:items-center md:justify-between">
@@ -160,7 +160,7 @@ export function CategoryManager({ categories }: CategoryManagerProps) {
             <p className="text-base font-semibold text-white">Eliminar categoría</p>
             <p className="mt-2 text-slate-300">
               ¿Seguro que deseas eliminar <span className="font-semibold text-white">{categoryToDelete.name}</span> del renglón{" "}
-              {bucketCopy[categoryToDelete.bucket]?.label ?? categoryToDelete.bucket}? Esta acción no se puede deshacer.
+              {categoryToDelete.bucket ? bucketCopy[categoryToDelete.bucket]?.label ?? categoryToDelete.bucket : "Sin renglón"}? Esta acción no se puede deshacer.
             </p>
             {deleteState.status === "error" && deleteState.message && (
               <p className="mt-3 text-xs text-rose-300">{deleteState.message}</p>

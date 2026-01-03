@@ -4,12 +4,13 @@ import { serverContainer } from "@/infrastructure/config/server-container";
 import { getAuthenticatedUser } from "@/lib/auth/require-auth";
 import { Transaction } from "@/domain/transactions/transaction";
 import { Category } from "@/domain/categories/category";
-import { Bucket } from "@/domain/value-objects/bucket";
+import type { PresetBucketKey } from "@/domain/user-buckets/user-bucket";
+
 
 type BudgetAlert = {
   id: string;
   categoryName: string;
-  bucket: Bucket;
+  bucket: PresetBucketKey;
   level: "warning" | "danger" | "success";
   planned: number;
   spent: number;
@@ -65,14 +66,18 @@ function buildCategoryAlerts(categories: Category[], transactions: Transaction[]
         return null;
       }
       const ratio = spent / planned;
-      if (category.bucket === "SAVINGS") {
+      const bucket = category.bucket;
+      if (!bucket) {
+        return null;
+      }
+      if (bucket === "SAVINGS") {
         if (ratio < 0.8) {
           return null;
         }
         return {
           id: category.id,
           categoryName: category.name,
-          bucket: category.bucket,
+          bucket,
           level: ratio >= 1 ? "success" : "warning",
           planned,
           spent,
@@ -85,7 +90,7 @@ function buildCategoryAlerts(categories: Category[], transactions: Transaction[]
       return {
         id: category.id,
         categoryName: category.name,
-        bucket: category.bucket,
+        bucket,
         level: ratio >= 1 ? "danger" : "warning",
         planned,
         spent,

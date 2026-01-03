@@ -77,7 +77,7 @@ export class GetDashboardSummaryUseCase {
           : daysInMonth;
 
     const nonSavingsSpent = bucketTotals
-      .filter((entry) => entry.bucket.presetKey && entry.bucket.presetKey !== "SAVINGS")
+      .filter((entry) => entry.bucket !== "SAVINGS")
       .reduce((sum, entry) => sum + entry.spent, 0);
 
     const totalSavingsRate = income ? 1 - nonSavingsSpent / income : 0;

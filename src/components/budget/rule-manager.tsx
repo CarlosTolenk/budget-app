@@ -6,6 +6,7 @@ import type { Rule } from "@/domain/rules/rule";
 import type { Category } from "@/domain/categories/category";
 import { initialActionState } from "@/app/actions/action-state";
 import { deleteRuleAction, updateRuleAction } from "@/app/actions/rule-actions";
+import { bucketOptions, type BucketValue } from "@/components/forms/bucket-options";
 
 interface RuleManagerProps {
   rules: Rule[];
@@ -45,6 +46,10 @@ export function RuleManager({ rules, categories }: RuleManagerProps) {
       })),
     [categories],
   );
+  const deriveBucket = (categoryId: string): BucketValue => {
+    const category = categories.find((entry) => entry.id === categoryId);
+    return (category?.bucket ?? "NEEDS") as BucketValue;
+  };
 
   return (
     <div className="flex h-[460px] flex-col rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
@@ -64,6 +69,7 @@ export function RuleManager({ rules, categories }: RuleManagerProps) {
               const categoryLabel = categoryOptions.find((option) => option.value === rule.categoryId)?.label ?? "Sin categoría";
               const isEditing = editingId === rule.id;
               if (isEditing) {
+                const defaultBucket = deriveBucket(rule.categoryId);
                 return (
                   <li key={rule.id} className="rounded-xl border border-emerald-300/30 bg-emerald-300/5 p-3">
                     <form action={updateAction} className="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-end">
@@ -85,6 +91,21 @@ export function RuleManager({ rules, categories }: RuleManagerProps) {
                           defaultValue={rule.priority}
                           className="mt-1 w-24 rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
                         />
+                      </label>
+                      <label className="text-[11px] uppercase tracking-wide text-slate-400">
+                        Renglón
+                        <select
+                          name="bucket"
+                          defaultValue={defaultBucket}
+                          className="mt-1 w-32 rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
+                          required
+                        >
+                          {bucketOptions.map((option) => (
+                            <option key={option.value} value={option.value} className="text-slate-900">
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
                       </label>
                       <label className="flex-1 text-[11px] uppercase tracking-wide text-slate-400">
                         Categoría

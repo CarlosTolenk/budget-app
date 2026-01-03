@@ -1,4 +1,4 @@
-import { Prisma, Transaction as PrismaTransaction } from "@prisma/client";
+import { Prisma, Transaction as PrismaTransaction, UserBucket } from "@prisma/client";
 import { TransactionRepository } from "@/domain/repositories";
 import { CreateTransactionInput, Transaction } from "@/domain/transactions/transaction";
 import { prisma } from "@/infrastructure/db/prisma-client";
@@ -97,7 +97,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
     await prisma.transaction.deleteMany({ where: { id, userId } });
   }
 
-  private mapTransaction(record: PrismaTransaction & { userBucket: Prisma.UserBucket }): Transaction {
+  private mapTransaction(record: PrismaTransaction & { userBucket: UserBucket }): Transaction {
     return {
       id: record.id,
       userId: record.userId,

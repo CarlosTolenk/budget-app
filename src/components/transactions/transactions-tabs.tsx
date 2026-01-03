@@ -305,7 +305,7 @@ function ManualPanel({ manual, categories }: { manual: Transaction[]; categories
                   "inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
                   sourceInfo.badgeClass,
                 );
-                const bucketLabel = bucketCopy[transaction.bucket]?.label ?? transaction.bucket;
+                const bucketLabel = transaction.bucket ? bucketCopy[transaction.bucket]?.label ?? transaction.bucket : "Sin renglón";
                 return (
                   <tr key={transaction.id} className="border-t border-white/5 text-sm last:border-b last:border-white/5">
                     <td className="py-3 pr-4 align-top">
@@ -601,7 +601,7 @@ type ContactLike = { name?: string; email?: string };
 function DraftCard({ draft, categories }: { draft: TransactionDraft; categories: Category[] }) {
   const [approveState, approveAction] = useActionState(approveDraftAction, initialActionState);
   const [deleteState, deleteAction] = useActionState(deleteDraftAction, initialActionState);
-  const [bucket, setBucket] = useState<BucketValue>(draft.bucket);
+  const [bucket, setBucket] = useState<BucketValue>(draft.bucket ?? "NEEDS");
   const [categoryId, setCategoryId] = useState(draft.categoryId ?? "");
   const [isEditing, setIsEditing] = useState(false);
 
@@ -635,7 +635,7 @@ function DraftCard({ draft, categories }: { draft: TransactionDraft; categories:
   const adapterLabel = formatAdapterLabel(adapterValue, draft.source);
   const messageSubject = typeof subjectValue === "string" ? subjectValue : undefined;
   const messageSnippet = typeof snippetValue === "string" ? snippetValue : undefined;
-  const bucketLabel = bucketCopy[draft.bucket]?.label ?? draft.bucket;
+  const bucketLabel = draft.bucket ? bucketCopy[draft.bucket]?.label ?? draft.bucket : "Sin renglón";
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm">

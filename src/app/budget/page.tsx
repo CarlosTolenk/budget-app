@@ -38,6 +38,9 @@ export default async function BudgetPage({ searchParams }: BudgetPageProps) {
   ]);
 
   const byBucket = categories.reduce<Record<string, typeof categories>>((acc, category) => {
+    if (!category.bucket) {
+      return acc;
+    }
     acc[category.bucket] = acc[category.bucket] ? [...acc[category.bucket], category] : [category];
     return acc;
   }, {});

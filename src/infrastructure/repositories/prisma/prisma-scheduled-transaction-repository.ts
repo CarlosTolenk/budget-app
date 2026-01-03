@@ -1,4 +1,4 @@
-import { Prisma, ScheduledTransaction as PrismaScheduled } from "@prisma/client";
+import { Prisma, ScheduledTransaction as PrismaScheduled, UserBucket } from "@prisma/client";
 import { ScheduledTransaction, ScheduledRecurrence, CreateScheduledTransactionInput } from "@/domain/scheduled-transactions/scheduled-transaction";
 import { ScheduledTransactionRepository } from "@/domain/repositories";
 import { prisma } from "@/infrastructure/db/prisma-client";
@@ -52,7 +52,7 @@ export class PrismaScheduledTransactionRepository implements ScheduledTransactio
     return records.map((record) => this.map(record));
   }
 
-  private map(record: PrismaScheduled & { userBucket: Prisma.UserBucket }): ScheduledTransaction {
+  private map(record: PrismaScheduled & { userBucket: UserBucket }): ScheduledTransaction {
     return {
       id: record.id,
       userId: record.userId,

@@ -18,6 +18,8 @@ const approveSchema = z.object({
   date: z.coerce.date().optional(),
 });
 
+type ApproveOverrides = Omit<z.infer<typeof approveSchema>, "id"> & { userBucketId?: string };
+
 const idSchema = z.object({ id: z.string().min(1) });
 
 export async function approveDraftAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -37,7 +39,8 @@ export async function approveDraftAction(_prev: ActionState, formData: FormData)
   try {
     const { appUser } = await requireAuth();
     const { approveTransactionDraftUseCase } = serverContainer();
-    const { id, ...overrides } = result.data;
+    const { id, ...rest } = result.data;
+    const overrides: ApproveOverrides = { ...rest };
     if (overrides.bucket) {
       const presetBucket = await resolvePresetBucket(appUser.id, overrides.bucket);
       overrides.userBucketId = presetBucket.id;

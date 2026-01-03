@@ -30,7 +30,8 @@ export class UpsertBudgetUseCase {
         if (!userBucketId) {
           return null;
         }
-        return { userBucketId, targetAmount: targets[`${key.toLowerCase()}Target` as const] };
+        const targetKey = `${key.toLowerCase()}Target` as "needsTarget" | "wantsTarget" | "savingsTarget";
+        return { userBucketId, targetAmount: targets[targetKey] };
       })
       .filter((entry): entry is { userBucketId: string; targetAmount: number } => Boolean(entry));
 

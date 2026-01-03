@@ -57,13 +57,17 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     return acc;
   }, {});
   const categorySpending = [
-    ...categories.map((category) => ({
-      id: category.id,
-      label: category.name,
-      bucketLabel: bucketCopy[category.bucket].label,
-      planned: category.idealMonthlyAmount ?? 0,
-      actual: spendingByCategory[category.id] ?? 0,
-    })),
+    ...categories
+      .map((category) => {
+        const bucket = category.bucket ? bucketCopy[category.bucket] : undefined;
+        return {
+          id: category.id,
+          label: category.name,
+          bucketLabel: bucket?.label,
+          planned: category.idealMonthlyAmount ?? 0,
+          actual: spendingByCategory[category.id] ?? 0,
+        };
+      }),
     ...(spendingByCategory.uncategorized
       ? [
           {
@@ -128,7 +132,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             <article key={bucket.bucket} className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
               <div className="flex items-center justify-between text-sm text-slate-300">
                 <span>{copy.label}</span>
-                <span>{formatPercent(bucket.targetRatio)}</span>
+                {bucket.targetRatio !== null && bucket.targetRatio !== undefined ? (
+                  <span>{formatPercent(bucket.targetRatio)}</span>
+                ) : null}
               </div>
               <p className="mt-4 text-2xl font-semibold">{formatCurrency(bucket.spent)}</p>
               <p className="text-sm text-slate-300">Real gastado</p>
@@ -177,7 +183,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                   <p className="font-medium">{transaction.merchant}</p>
                   <p className="text-xs text-slate-400">
                     {formatInAppTimezone(transaction.date, { day: "2-digit", month: "short" }).replace(".", "")} ·{" "}
-                    {bucketCopy[transaction.bucket]?.label ?? transaction.bucket}
+                    {transaction.bucket ? bucketCopy[transaction.bucket]?.label ?? transaction.bucket : "Sin renglón"}
                   </p>
                 </div>
                 <p
@@ -204,7 +210,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               >
                 <div>
                   <p className="font-medium">{category.name}</p>
-                  <p className="text-xs text-slate-400">{bucketCopy[category.bucket]?.label ?? category.bucket}</p>
+                  <p className="text-xs text-slate-400">
+                    {category.bucket ? bucketCopy[category.bucket]?.label ?? category.bucket : "Sin renglón"}
+                  </p>
                   <p className="text-xs text-slate-300">
                     Plan {formatCurrency(category.idealMonthlyAmount ?? 0)} · Real{" "}
                     {formatCurrency(spendingByCategory[category.id] ?? 0)}
