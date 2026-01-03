@@ -1,11 +1,15 @@
-import { ScheduledTransaction as PrismaScheduled } from "@prisma/client";
+import { Prisma, ScheduledTransaction as PrismaScheduled } from "@prisma/client";
 import { ScheduledTransaction, ScheduledRecurrence, CreateScheduledTransactionInput } from "@/domain/scheduled-transactions/scheduled-transaction";
 import { ScheduledTransactionRepository } from "@/domain/repositories";
 import { prisma } from "@/infrastructure/db/prisma-client";
 
 export class PrismaScheduledTransactionRepository implements ScheduledTransactionRepository {
   async listAll(userId: string): Promise<ScheduledTransaction[]> {
-    const records = await prisma.scheduledTransaction.findMany({ where: { userId }, orderBy: { nextRunDate: "asc" } });
+    const records = await prisma.scheduledTransaction.findMany({
+      where: { userId },
+      orderBy: { nextRunDate: "asc" },
+      include: { userBucket: true },
+    });
     return records.map((record) => this.map(record));
   }
 
@@ -17,12 +21,13 @@ export class PrismaScheduledTransactionRepository implements ScheduledTransactio
         amount: input.amount,
         currency: input.currency,
         merchant: input.merchant,
-        bucket: input.bucket,
+        userBucketId: input.userBucketId,
         categoryId: input.categoryId,
         recurrence: input.recurrence,
         startDate: input.startDate,
         nextRunDate: input.startDate,
       },
+      include: { userBucket: true },
     });
     return this.map(record);
   }
@@ -42,11 +47,12 @@ export class PrismaScheduledTransactionRepository implements ScheduledTransactio
   async findDue(date: Date): Promise<ScheduledTransaction[]> {
     const records = await prisma.scheduledTransaction.findMany({
       where: { active: true, nextRunDate: { lte: date } },
+      include: { userBucket: true },
     });
     return records.map((record) => this.map(record));
   }
 
-  private map(record: PrismaScheduled): ScheduledTransaction {
+  private map(record: PrismaScheduled & { userBucket: Prisma.UserBucket }): ScheduledTransaction {
     return {
       id: record.id,
       userId: record.userId,
@@ -54,7 +60,19 @@ export class PrismaScheduledTransactionRepository implements ScheduledTransactio
       amount: Number(record.amount),
       currency: record.currency,
       merchant: record.merchant,
-      bucket: record.bucket,
+      userBucketId: record.userBucketId,
+      userBucket: {
+        id: record.userBucket.id,
+        userId: record.userBucket.userId,
+        name: record.userBucket.name,
+        sortOrder: record.userBucket.sortOrder,
+        color: record.userBucket.color,
+        mode: record.userBucket.mode,
+        presetKey: record.userBucket.presetKey,
+        createdAt: record.userBucket.createdAt,
+        updatedAt: record.userBucket.updatedAt,
+      },
+      bucket: record.userBucket.presetKey,
       categoryId: record.categoryId,
       recurrence: record.recurrence as ScheduledRecurrence,
       startDate: record.startDate,

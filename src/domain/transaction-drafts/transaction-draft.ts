@@ -1,4 +1,4 @@
-import { Bucket } from "@/domain/value-objects/bucket";
+import { UserBucket, PresetBucketKey } from "@/domain/user-buckets/user-bucket";
 
 export interface TransactionDraft {
   id: string;
@@ -7,7 +7,9 @@ export interface TransactionDraft {
   amount: number;
   currency: string;
   merchant?: string | null;
-  bucket: Bucket;
+  userBucketId: string;
+  userBucket: UserBucket;
+  bucket?: PresetBucketKey | null;
   categoryId?: string | null;
   emailMessageId?: string | null;
   rawPayload?: Record<string, unknown> | null;
@@ -22,7 +24,7 @@ export interface CreateDraftInput {
   amount: number;
   currency: string;
   merchant?: string;
-  bucket: Bucket;
+  userBucketId: string;
   categoryId?: string;
   emailMessageId?: string;
   rawPayload?: Record<string, unknown> | null;

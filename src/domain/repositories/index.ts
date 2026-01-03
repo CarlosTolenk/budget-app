@@ -5,5 +5,6 @@ export * from "./rule-repository";
 export * from "./income-repository";
 export * from "./scheduled-transaction-repository";
 export * from "./transaction-draft-repository";
+export * from "./user-bucket-repository";
 export * from "./user-repository";
 export * from "./gmail-credential-repository";

@@ -1,12 +1,11 @@
 import { TransactionDraftRepository, TransactionRepository, CategoryRepository } from "@/domain/repositories";
-import { Bucket } from "@/domain/value-objects/bucket";
 
 interface DraftOverride {
   date?: Date;
   amount?: number;
   merchant?: string;
   currency?: string;
-  bucket?: Bucket;
+  userBucketId?: string;
   categoryId?: string;
 }
 
@@ -23,7 +22,7 @@ export class ApproveTransactionDraftUseCase {
       throw new Error("Draft no encontrado");
     }
 
-    const bucket = overrides.bucket ?? draft.bucket;
+    const userBucketId = overrides.userBucketId ?? draft.userBucketId;
     const categoryId = overrides.categoryId ?? draft.categoryId;
 
     if (!categoryId) {
@@ -35,7 +34,7 @@ export class ApproveTransactionDraftUseCase {
       throw new Error("Categoría no encontrada");
     }
 
-    if (category.bucket !== bucket) {
+    if (category.userBucketId !== userBucketId) {
       throw new Error("La categoría no coincide con el bucket seleccionado");
     }
 
@@ -48,7 +47,7 @@ export class ApproveTransactionDraftUseCase {
       amount: normalizedAmount,
       currency: overrides.currency ?? draft.currency,
       merchant: overrides.merchant ?? draft.merchant ?? undefined,
-      bucket,
+      userBucketId,
       categoryId,
       source: "EMAIL",
       emailMessageId: draft.emailMessageId ?? undefined,

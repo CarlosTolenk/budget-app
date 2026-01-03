@@ -1,6 +1,6 @@
 import { CategoryRepository } from "@/domain/repositories";
 import { Category } from "@/domain/categories/category";
-import { memoryCategories } from "./memory-data";
+import { memoryBuckets, memoryCategories } from "./memory-data";
 
 function sanitize(value: number): number {
   return Number.isFinite(value) ? value : 0;
@@ -20,14 +20,17 @@ export class MemoryCategoryRepository implements CategoryRepository {
   async create(input: {
     userId: string;
     name: string;
-    bucket: Category["bucket"];
+    userBucketId: string;
     idealMonthlyAmount: number;
   }): Promise<Category> {
+    const bucket = this.findBucket(input.userBucketId, input.userId);
     const category: Category = {
       id: `cat-${Math.random().toString(36).slice(2)}`,
       userId: input.userId,
       name: input.name,
-      bucket: input.bucket,
+      userBucketId: bucket.id,
+      userBucket: bucket,
+      bucket: bucket.presetKey,
       idealMonthlyAmount: sanitize(input.idealMonthlyAmount),
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -41,7 +44,7 @@ export class MemoryCategoryRepository implements CategoryRepository {
     id: string;
     userId: string;
     name: string;
-    bucket: Category["bucket"];
+    userBucketId: string;
     idealMonthlyAmount: number;
   }): Promise<Category> {
     const index = this.categories.findIndex((category) => category.id === input.id && category.userId === input.userId);
@@ -49,10 +52,13 @@ export class MemoryCategoryRepository implements CategoryRepository {
       throw new Error("Categoría no encontrada");
     }
 
+    const bucket = this.findBucket(input.userBucketId, input.userId);
     const updated: Category = {
       ...this.categories[index],
       name: input.name,
-      bucket: input.bucket,
+      userBucketId: bucket.id,
+      userBucket: bucket,
+      bucket: bucket.presetKey,
       idealMonthlyAmount: sanitize(input.idealMonthlyAmount),
       updatedAt: new Date(),
     };
@@ -67,5 +73,13 @@ export class MemoryCategoryRepository implements CategoryRepository {
       throw new Error("Categoría no encontrada");
     }
     this.categories = this.categories.filter((category) => !(category.id === input.id && category.userId === input.userId));
+  }
+
+  private findBucket(userBucketId: string, userId: string) {
+    const bucket = memoryBuckets.find((entry) => entry.id === userBucketId && entry.userId === userId);
+    if (!bucket) {
+      throw new Error("Bucket no encontrado");
+    }
+    return bucket;
   }
 }

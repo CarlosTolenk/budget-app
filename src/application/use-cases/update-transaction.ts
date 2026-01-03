@@ -8,7 +8,7 @@ interface UpdateTransactionInput {
   amount?: number;
   merchant?: string;
   currency?: string;
-  bucket?: Transaction["bucket"];
+  userBucketId?: string;
   categoryId?: string;
 }
 

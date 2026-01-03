@@ -8,15 +8,15 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-enum Bucket {
-  NEEDS
-  WANTS
-  SAVINGS
-}
-
 enum BucketMode {
   PRESET
   CUSTOM
+}
+
+enum PresetBucketKey {
+  NEEDS
+  WANTS
+  SAVINGS
 }
 
 enum TransactionSource {
@@ -30,12 +30,13 @@ enum ScheduledRecurrence {
 }
 
 model User {
-  id              String               @id @default(cuid())
-  supabaseUserId  String?              @unique
+  id              String                @id @default(cuid())
+  supabaseUserId  String?               @unique
   email           String?
-  bucketMode      BucketMode           @default(PRESET)
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
+  bucketMode      BucketMode            @default(PRESET)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  buckets         UserBucket[]
   transactions    Transaction[]
   scheduled       ScheduledTransaction[]
   drafts          TransactionDraft[]
@@ -48,68 +49,95 @@ model User {
   @@index([supabaseUserId])
 }
 
+model UserBucket {
+  id          String             @id @default(cuid())
+  user        User               @relation(fields: [userId], references: [id])
+  userId      String
+  name        String
+  sortOrder   Int                @default(0)
+  color       String?
+  mode        BucketMode
+  presetKey   PresetBucketKey?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  categories  Category[]
+  transactions Transaction[]
+  scheduled   ScheduledTransaction[]
+  drafts      TransactionDraft[]
+  rules       Rule[]
+  budgetRows  BudgetBucket[]
+
+  @@index([userId])
+  @@unique([userId, presetKey])
+}
+
 model Transaction {
-  id             String    @id @default(cuid())
-  user           User      @relation(fields: [userId], references: [id])
+  id             String      @id @default(cuid())
+  user           User        @relation(fields: [userId], references: [id])
   userId         String
+  userBucket     UserBucket  @relation(fields: [userBucketId], references: [id])
+  userBucketId   String
   date           DateTime
   amount         Decimal
   currency       String
   merchant       String?
-  category       Category? @relation(fields: [categoryId], references: [id])
+  category       Category?   @relation(fields: [categoryId], references: [id])
   categoryId     String?
-  bucket         Bucket
   source         TransactionSource
   emailMessageId String?
   rawPayload     Json?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
   @@index([userId])
+  @@index([userBucketId])
   @@unique([userId, emailMessageId])
 }
 
 model ScheduledTransaction {
-  id           String               @id @default(cuid())
-  user         User                 @relation(fields: [userId], references: [id])
-  userId       String
-  name         String
-  amount       Decimal
-  currency     String
-  merchant     String?
-  bucket       Bucket
-  category     Category?            @relation(fields: [categoryId], references: [id])
-  categoryId   String?
-  recurrence   ScheduledRecurrence
-  startDate    DateTime
-  nextRunDate  DateTime
-  endDate      DateTime?
-  active       Boolean              @default(true)
-  createdAt    DateTime             @default(now())
-  updatedAt    DateTime             @updatedAt
+  id             String               @id @default(cuid())
+  user           User                 @relation(fields: [userId], references: [id])
+  userId         String
+  userBucket     UserBucket           @relation(fields: [userBucketId], references: [id])
+  userBucketId   String
+  name           String
+  amount         Decimal
+  currency       String
+  merchant       String?
+  category       Category?            @relation(fields: [categoryId], references: [id])
+  categoryId     String?
+  recurrence     ScheduledRecurrence
+  startDate      DateTime
+  nextRunDate    DateTime
+  endDate        DateTime?
+  active         Boolean              @default(true)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
 
   @@index([nextRunDate])
   @@index([active])
   @@index([userId])
+  @@index([userBucketId])
 }
 
 model TransactionDraft {
-  id             String   @id @default(cuid())
-  user           User     @relation(fields: [userId], references: [id])
+  id             String      @id @default(cuid())
+  user           User        @relation(fields: [userId], references: [id])
   userId         String
+  userBucket     UserBucket  @relation(fields: [userBucketId], references: [id])
+  userBucketId   String
   date           DateTime
   amount         String
   currency       String
   merchant       String?
-  bucket         Bucket
-  category       Category? @relation(fields: [categoryId], references: [id])
+  category       Category?   @relation(fields: [categoryId], references: [id])
   categoryId     String?
   emailMessageId String?
   rawPayload     Json?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
-  @@index([bucket])
+  @@index([userBucketId])
   @@index([userId])
   @@unique([userId, emailMessageId])
 }
@@ -118,8 +146,9 @@ model Category {
   id                    String                @id @default(cuid())
   user                  User                  @relation(fields: [userId], references: [id])
   userId                String
+  userBucket            UserBucket            @relation(fields: [userBucketId], references: [id])
+  userBucketId          String
   name                  String
-  bucket                Bucket
   idealMonthlyAmount    Decimal               @default(0)
   transactions          Transaction[]
   rules                 Rule[]
@@ -130,37 +159,53 @@ model Category {
 
   @@unique([userId, name])
   @@index([userId])
+  @@index([userBucketId])
 }
 
 model Budget {
-  id            String   @id @default(cuid())
-  user          User     @relation(fields: [userId], references: [id])
-  userId        String
-  month         String
-  income        Decimal
-  needsTarget   Decimal
-  wantsTarget   Decimal
-  savingsTarget Decimal
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id        String        @id @default(cuid())
+  user      User          @relation(fields: [userId], references: [id])
+  userId    String
+  month     String
+  income    Decimal
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  buckets   BudgetBucket[]
 
   @@unique([userId, month])
   @@index([userId])
 }
 
+model BudgetBucket {
+  id           String      @id @default(cuid())
+  budget       Budget      @relation(fields: [budgetId], references: [id])
+  budgetId     String
+  userBucket   UserBucket  @relation(fields: [userBucketId], references: [id])
+  userBucketId String
+  targetAmount Decimal
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@unique([budgetId, userBucketId])
+  @@index([userBucketId])
+}
+
 model Rule {
-  id         String   @id @default(cuid())
-  user       User     @relation(fields: [userId], references: [id])
-  userId     String
-  pattern    String
-  priority   Int      @default(0)
-  category   Category @relation(fields: [categoryId], references: [id])
-  categoryId String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id           String      @id @default(cuid())
+  user         User        @relation(fields: [userId], references: [id])
+  userId       String
+  userBucket   UserBucket  @relation(fields: [userBucketId], references: [id])
+  userBucketId String
+  pattern      String
+  priority     Int         @default(0)
+  category     Category    @relation(fields: [categoryId], references: [id])
+  categoryId   String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   @@index([categoryId])
   @@index([userId])
+  @@index([userBucketId])
 }
 
 model Income {

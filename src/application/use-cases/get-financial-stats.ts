@@ -1,6 +1,6 @@
 import { addMonths, format, isAfter, parseISO, subMonths } from "date-fns";
 import { CategoryRepository, IncomeRepository, TransactionRepository } from "@/domain/repositories";
-import { Bucket } from "@/domain/value-objects/bucket";
+import { Category } from "@/domain/categories/category";
 
 interface FinancialStatsInput {
   userId: string;
@@ -25,7 +25,7 @@ interface CategoryMonthlyTotal {
 interface CategoryStat {
   id: string;
   name: string;
-  bucket?: Bucket;
+  bucket?: Category["userBucket"];
   total: number;
   monthlyTotals: CategoryMonthlyTotal[];
 }
@@ -106,7 +106,7 @@ export class GetFinancialStatsUseCase {
         return {
           id: categoryId,
           name: category?.name ?? "Sin categoría",
-          bucket: category?.bucket,
+          bucket: category?.userBucket,
           total,
           monthlyTotals: monthIds.map((month) => ({
             month,

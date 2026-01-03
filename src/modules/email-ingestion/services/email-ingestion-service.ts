@@ -3,11 +3,13 @@ import {
   RuleRepository,
   TransactionRepository,
   TransactionDraftRepository,
+  UserBucketRepository,
 } from "@/domain/repositories";
 import { CreateDraftInput } from "@/domain/transaction-drafts/transaction-draft";
 import { EmailProvider } from "../providers/email-provider";
 import { BankAdapter } from "../adapters/bank-adapter";
 import { EmailMessage } from "../types/email-message";
+import { toAppUtc } from "@/lib/dates/timezone";
 
 export interface EmailIngestionResult {
   imported: number;
@@ -28,6 +30,7 @@ export class EmailIngestionService {
     private readonly draftRepository: TransactionDraftRepository,
     private readonly categoryRepository: CategoryRepository,
     private readonly ruleRepository: RuleRepository,
+    private readonly userBucketRepository: UserBucketRepository,
   ) {}
 
   async run(userId: string, provider: EmailProvider): Promise<EmailIngestionResult> {
@@ -73,9 +76,17 @@ export class EmailIngestionService {
       }
 
       const categoryId = this.mapCategory(message, rules, categories);
-      const bucket = categoryId
-        ? categories.find((category) => category.id === categoryId)?.bucket ?? parsed.bucket
-        : parsed.bucket;
+      const category = categoryId ? categories.find((entry) => entry.id === categoryId) : undefined;
+      const presetBucket = category?.bucket ?? parsed.bucket;
+      let userBucketId: string | undefined = category?.userBucketId;
+      if (!userBucketId && presetBucket) {
+        const preset = await this.userBucketRepository.findByPresetKey(userId, presetBucket);
+        userBucketId = preset?.id;
+      }
+      if (!userBucketId) {
+        recordSkip("parse-failed");
+        continue;
+      }
 
       const enrichedPayload = {
         ...(parsed.rawPayload ?? {}),
@@ -88,7 +99,14 @@ export class EmailIngestionService {
         adapter: adapter.name,
       };
 
-      toPersist.push({ ...parsed, userId, categoryId, bucket, rawPayload: enrichedPayload });
+      toPersist.push({
+        ...parsed,
+        date: toAppUtc(parsed.date),
+        userId,
+        categoryId,
+        userBucketId,
+        rawPayload: enrichedPayload,
+      });
     }
 
     for (const draft of toPersist) {

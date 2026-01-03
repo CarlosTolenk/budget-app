@@ -17,3 +17,5 @@ export function formatMonthLabel(monthId: string, locale = "es-ES"): string {
   const capitalized = monthName.charAt(0).toUpperCase() + monthName.slice(1);
   return `${capitalized} ${date.getFullYear()}`;
 }
+
+export { formatInAppTimezone } from "@/lib/dates/timezone";

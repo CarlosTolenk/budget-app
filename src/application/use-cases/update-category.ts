@@ -5,7 +5,7 @@ interface UpdateCategoryInput {
   userId: string;
   id: string;
   name: string;
-  bucket: Category["bucket"];
+  userBucketId: string;
   idealMonthlyAmount: number;
 }
 
@@ -17,7 +17,7 @@ export class UpdateCategoryUseCase {
       id: input.id,
       userId: input.userId,
       name: input.name.trim(),
-      bucket: input.bucket,
+      userBucketId: input.userBucketId,
       idealMonthlyAmount: input.idealMonthlyAmount,
     });
   }

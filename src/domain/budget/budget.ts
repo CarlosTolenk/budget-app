@@ -1,21 +1,29 @@
-import { Bucket } from "../value-objects/bucket";
+import { UserBucket } from "@/domain/user-buckets/user-bucket";
 
-export interface BudgetTargets {
-  needsTarget: number;
-  wantsTarget: number;
-  savingsTarget: number;
-}
-
-export interface Budget extends BudgetTargets {
+export interface Budget {
   id: string;
   userId: string;
   month: string; // YYYY-MM
   income: number;
   createdAt: Date;
   updatedAt: Date;
+  buckets: BudgetBucket[];
 }
 
-export interface BucketAllocation extends BudgetTargets {
-  bucket: Bucket;
-  allocated: number;
+export interface BudgetBucket {
+  id: string;
+  budgetId: string;
+  userBucketId: string;
+  userBucket: UserBucket;
+  targetAmount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface BucketAllocation {
+  userBucketId: string;
+  userBucket: UserBucket;
+  target: number;
+  planned: number;
+  spent: number;
 }

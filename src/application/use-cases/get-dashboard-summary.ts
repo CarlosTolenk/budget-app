@@ -1,6 +1,6 @@
 import { format, parseISO } from "date-fns";
-import { BudgetRepository, CategoryRepository, TransactionRepository } from "@/domain/repositories";
-import { Bucket, bucketCopy, bucketOrder } from "@/domain/value-objects/bucket";
+import { BudgetRepository, CategoryRepository, TransactionRepository, UserBucketRepository } from "@/domain/repositories";
+import { presetBucketCopy } from "@/domain/user-buckets/preset-buckets";
 import { DashboardSummary } from "../dtos/dashboard";
 
 interface GetDashboardSummaryInput {
@@ -14,37 +14,44 @@ export class GetDashboardSummaryUseCase {
     private readonly budgetRepository: BudgetRepository,
     private readonly transactionRepository: TransactionRepository,
     private readonly categoryRepository: CategoryRepository,
+    private readonly userBucketRepository: UserBucketRepository,
   ) {}
 
   async execute({ userId, monthId, now = new Date() }: GetDashboardSummaryInput): Promise<DashboardSummary> {
     const resolvedMonthId = monthId ?? format(now, "yyyy-MM");
-    const [budget, transactions, categories] = await Promise.all([
+    const [budget, transactions, categories, userBuckets] = await Promise.all([
       this.budgetRepository.getByMonth(resolvedMonthId, userId),
       this.transactionRepository.findByMonth(resolvedMonthId, userId),
       this.categoryRepository.listAll(userId),
+      this.userBucketRepository.listByUserId(userId),
     ]);
 
     const income = budget?.income ?? transactions.reduce((sum, t) => sum + (t.amount > 0 ? t.amount : 0), 0);
 
-    const bucketTotals = bucketOrder.map((bucket) => {
+    const bucketTotals = userBuckets.map((bucket) => {
       const spent = transactions
-        .filter((transaction) => transaction.bucket === bucket)
+        .filter((transaction) => transaction.userBucketId === bucket.id)
         .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
       const planned = categories
-        .filter((category) => category.bucket === bucket)
+        .filter((category) => category.userBucketId === bucket.id)
         .reduce((sum, category) => sum + (category.idealMonthlyAmount ?? 0), 0);
 
-      const targetRatio = bucketCopy[bucket].targetRatio;
-      const target = budget
-        ? this.pickTarget(bucket, budget)
-        : Number((income * targetRatio).toFixed(2));
+      const budgetTarget = budget?.buckets.find((entry) => entry.userBucketId === bucket.id);
+      const fallbackRatio = bucket.presetKey ? presetBucketCopy[bucket.presetKey].targetRatio : null;
+      const target = budgetTarget
+        ? budgetTarget.targetAmount
+        : fallbackRatio
+          ? Number((income * fallbackRatio).toFixed(2))
+          : 0;
 
       return {
-        bucket,
+        bucketId: bucket.id,
+        bucket: bucket.presetKey ?? "NEEDS",
+        bucketDetails: bucket,
         spent,
         planned,
         target,
-        targetRatio,
+        targetRatio: fallbackRatio,
       };
     });
 
@@ -69,9 +76,11 @@ export class GetDashboardSummaryUseCase {
           ? 0
           : daysInMonth;
 
-    const totalSavingsRate = income
-      ? 1 - bucketTotals.slice(0, 2).reduce((sum, bucket) => sum + bucket.spent, 0) / income
-      : 0;
+    const nonSavingsSpent = bucketTotals
+      .filter((entry) => entry.bucket.presetKey && entry.bucket.presetKey !== "SAVINGS")
+      .reduce((sum, entry) => sum + entry.spent, 0);
+
+    const totalSavingsRate = income ? 1 - nonSavingsSpent / income : 0;
 
     return {
       month: resolvedMonthId,
@@ -81,16 +90,5 @@ export class GetDashboardSummaryUseCase {
       remainingDays,
       periodStatus,
     };
-  }
-
-  private pickTarget(bucket: Bucket, budget: { needsTarget: number; wantsTarget: number; savingsTarget: number }) {
-    switch (bucket) {
-      case "NEEDS":
-        return Number(budget.needsTarget);
-      case "WANTS":
-        return Number(budget.wantsTarget);
-      default:
-        return Number(budget.savingsTarget);
-    }
   }
 }

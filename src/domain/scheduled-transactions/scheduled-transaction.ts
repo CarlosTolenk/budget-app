@@ -1,4 +1,4 @@
-import { Bucket } from "@/domain/value-objects/bucket";
+import { UserBucket, PresetBucketKey } from "@/domain/user-buckets/user-bucket";
 
 export type ScheduledRecurrence = "MONTHLY";
 
@@ -9,7 +9,9 @@ export interface ScheduledTransaction {
   amount: number;
   currency: string;
   merchant?: string | null;
-  bucket: Bucket;
+  userBucketId: string;
+  userBucket: UserBucket;
+  bucket?: PresetBucketKey | null;
   categoryId?: string | null;
   recurrence: ScheduledRecurrence;
   startDate: Date;
@@ -26,7 +28,7 @@ export interface CreateScheduledTransactionInput {
   amount: number;
   currency: string;
   merchant?: string;
-  bucket: Bucket;
+  userBucketId: string;
   categoryId?: string;
   recurrence: ScheduledRecurrence;
   startDate: Date;

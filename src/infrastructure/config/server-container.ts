@@ -21,10 +21,12 @@ import { PrismaTransactionRepository } from "@/infrastructure/repositories/prism
 import { PrismaBudgetRepository } from "@/infrastructure/repositories/prisma/prisma-budget-repository";
 import { PrismaCategoryRepository } from "@/infrastructure/repositories/prisma/prisma-category-repository";
 import { PrismaRuleRepository } from "@/infrastructure/repositories/prisma/prisma-rule-repository";
+import { PrismaUserBucketRepository } from "@/infrastructure/repositories/prisma/prisma-user-bucket-repository";
 import { MemoryTransactionRepository } from "@/infrastructure/repositories/memory/memory-transaction-repository";
 import { MemoryBudgetRepository } from "@/infrastructure/repositories/memory/memory-budget-repository";
 import { MemoryCategoryRepository } from "@/infrastructure/repositories/memory/memory-category-repository";
 import { MemoryRuleRepository } from "@/infrastructure/repositories/memory/memory-rule-repository";
+import { MemoryUserBucketRepository } from "@/infrastructure/repositories/memory/memory-user-bucket-repository";
 import { MemoryIncomeRepository } from "@/infrastructure/repositories/memory/memory-income-repository";
 import { GmailProvider } from "@/infrastructure/email/gmail-provider";
 import { GenericBankAdapter } from "@/modules/email-ingestion/adapters/generic-bank-adapter";
@@ -53,6 +55,7 @@ import { DeleteRuleUseCase } from "@/application/use-cases/delete-rule";
 import { UserRepository } from "@/domain/repositories/user-repository";
 import { PrismaUserRepository } from "@/infrastructure/repositories/prisma/prisma-user-repository";
 import { MemoryUserRepository } from "@/infrastructure/repositories/memory/memory-user-repository";
+import { UserBucketRepository } from "@/domain/repositories/user-bucket-repository";
 import { GmailCredentialRepository } from "@/domain/repositories";
 import { PrismaGmailCredentialRepository } from "@/infrastructure/repositories/prisma/prisma-gmail-credential-repository";
 import { MemoryGmailCredentialRepository } from "@/infrastructure/repositories/memory/memory-gmail-credential-repository";
@@ -87,6 +90,7 @@ interface ServerContainer {
   deleteTransactionDraftUseCase: DeleteTransactionDraftUseCase;
   deleteScheduledTransactionUseCase: DeleteScheduledTransactionUseCase;
   userRepository: UserRepository;
+  userBucketRepository: UserBucketRepository;
   gmailCredentialRepository: GmailCredentialRepository;
 }
 
@@ -103,6 +107,7 @@ export function serverContainer(): ServerContainer {
   const budgetRepository = hasDatabase ? new PrismaBudgetRepository() : new MemoryBudgetRepository();
   const categoryRepository = hasDatabase ? new PrismaCategoryRepository() : new MemoryCategoryRepository();
   const ruleRepository = hasDatabase ? new PrismaRuleRepository() : new MemoryRuleRepository();
+  const userBucketRepository = hasDatabase ? new PrismaUserBucketRepository() : new MemoryUserBucketRepository();
   const incomeRepository = hasDatabase ? new PrismaIncomeRepository() : new MemoryIncomeRepository();
   const scheduledTransactionRepository = hasDatabase
     ? new PrismaScheduledTransactionRepository()
@@ -139,17 +144,23 @@ export function serverContainer(): ServerContainer {
     draftRepository,
     categoryRepository,
     ruleRepository,
+    userBucketRepository,
   );
 
   const financialStatsUseCase = new GetFinancialStatsUseCase(transactionRepository, incomeRepository, categoryRepository);
 
   cachedContainer = {
-    getDashboardSummaryUseCase: new GetDashboardSummaryUseCase(budgetRepository, transactionRepository, categoryRepository),
+    getDashboardSummaryUseCase: new GetDashboardSummaryUseCase(
+      budgetRepository,
+      transactionRepository,
+      categoryRepository,
+      userBucketRepository,
+    ),
     listTransactionsUseCase: new ListTransactionsUseCase(transactionRepository),
     listCategoriesUseCase: new ListCategoriesUseCase(categoryRepository),
     listRulesUseCase: new ListRulesUseCase(ruleRepository),
     processIncomingEmailsUseCase: new ProcessIncomingEmailsUseCase(emailIngestionService, emailProviderResolver),
-    upsertBudgetUseCase: new UpsertBudgetUseCase(budgetRepository),
+    upsertBudgetUseCase: new UpsertBudgetUseCase(budgetRepository, userBucketRepository),
     createCategoryUseCase: new CreateCategoryUseCase(categoryRepository),
     updateCategoryUseCase: new UpdateCategoryUseCase(categoryRepository),
     deleteCategoryUseCase: new DeleteCategoryUseCase(categoryRepository),
@@ -159,9 +170,9 @@ export function serverContainer(): ServerContainer {
     createTransactionUseCase: new CreateTransactionUseCase(transactionRepository),
     updateTransactionUseCase: new UpdateTransactionUseCase(transactionRepository),
     deleteTransactionUseCase: new DeleteTransactionUseCase(transactionRepository),
-    createIncomeUseCase: new CreateIncomeUseCase(incomeRepository, budgetRepository),
-    updateIncomeUseCase: new UpdateIncomeUseCase(incomeRepository, budgetRepository),
-    deleteIncomeUseCase: new DeleteIncomeUseCase(incomeRepository, budgetRepository),
+    createIncomeUseCase: new CreateIncomeUseCase(incomeRepository, budgetRepository, userBucketRepository),
+    updateIncomeUseCase: new UpdateIncomeUseCase(incomeRepository, budgetRepository, userBucketRepository),
+    deleteIncomeUseCase: new DeleteIncomeUseCase(incomeRepository, budgetRepository, userBucketRepository),
     listIncomesUseCase: new ListIncomesUseCase(incomeRepository),
     getYearlyOverviewUseCase: new GetYearlyOverviewUseCase(incomeRepository, transactionRepository),
     createScheduledTransactionUseCase: new CreateScheduledTransactionUseCase(scheduledTransactionRepository),
@@ -176,6 +187,7 @@ export function serverContainer(): ServerContainer {
     deleteTransactionDraftUseCase: new DeleteTransactionDraftUseCase(draftRepository),
     getFinancialStatsUseCase: financialStatsUseCase,
     userRepository,
+    userBucketRepository,
     gmailCredentialRepository,
   };
 

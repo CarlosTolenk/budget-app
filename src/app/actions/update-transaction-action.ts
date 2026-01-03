@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { serverContainer } from "@/infrastructure/config/server-container";
 import { requireAuth } from "@/lib/auth/require-auth";
+import { toAppUtc } from "@/lib/dates/timezone";
+import { resolvePresetBucket } from "@/lib/buckets/assert-user-bucket";
 import { ActionState } from "./action-state";
 
 const schema = z.object({
@@ -35,6 +37,7 @@ export async function updateTransactionAction(_prev: ActionState, formData: Form
     const { appUser } = await requireAuth();
     const { updateTransactionUseCase, listCategoriesUseCase } = serverContainer();
     const { id, ...data } = result.data;
+    const presetBucket = data.bucket ? await resolvePresetBucket(appUser.id, data.bucket) : undefined;
 
     if (data.categoryId) {
       const categories = await listCategoriesUseCase.execute(appUser.id);
@@ -42,20 +45,22 @@ export async function updateTransactionAction(_prev: ActionState, formData: Form
       if (!category) {
         return { status: "error", message: "Categoría no encontrada" };
       }
-      const bucket = data.bucket ?? category.bucket;
-      if (category.bucket !== bucket) {
+      const bucketId = presetBucket?.id ?? category.userBucketId;
+      if (category.userBucketId !== bucketId) {
         return { status: "error", message: "La categoría no coincide con el bucket seleccionado" };
       }
     }
 
-    const { amount, ...rest } = data;
+    const { amount, bucket, date, ...rest } = data;
     const normalizedAmount =
       amount !== undefined ? (amount < 0 ? amount : -Math.abs(amount)) : undefined;
 
     await updateTransactionUseCase.execute({
       userId: appUser.id,
       id,
+      ...(date ? { date: toAppUtc(date) } : {}),
       ...rest,
+      ...(presetBucket ? { userBucketId: presetBucket.id } : {}),
       ...(normalizedAmount !== undefined ? { amount: normalizedAmount } : {}),
     });
     revalidatePath("/");

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
 import clsx from "clsx";
 import { formatCurrency } from "@/lib/format";
-import { bucketCopy, type Bucket } from "@/domain/value-objects/bucket";
+import type { UserBucket } from "@/domain/user-buckets/user-bucket";
 
 type CategoryMonthlyTotal = {
   month: string;
@@ -14,7 +14,7 @@ type CategoryMonthlyTotal = {
 type CategoryData = {
   id: string;
   name: string;
-  bucket?: Bucket;
+  bucket?: UserBucket;
   total: number;
   monthlyTotals: CategoryMonthlyTotal[];
 };
@@ -71,7 +71,7 @@ export function TopCategorySpending({ categories }: TopCategorySpendingProps) {
         <div className="md:w-1/2">
           <ul className="space-y-4 max-h-[420px] overflow-y-auto pr-2">
             {categories.map((category) => {
-              const bucket = category.bucket ? bucketCopy[category.bucket] : undefined;
+              const bucketLabel = category.bucket?.name;
               const width = (category.total / maxCategoryTotal) * 100;
               const isActive = selectedCategory?.id === category.id;
               return (
@@ -88,8 +88,8 @@ export function TopCategorySpending({ categories }: TopCategorySpendingProps) {
                     <div className="flex items-center justify-between text-sm">
                       <div>
                         <p className="font-semibold">{category.name}</p>
-                        {bucket && (
-                          <span className="text-[11px] uppercase tracking-wide text-slate-400">{bucket.label}</span>
+                        {bucketLabel && (
+                          <span className="text-[11px] uppercase tracking-wide text-slate-400">{bucketLabel}</span>
                         )}
                       </div>
                       <p className="text-sm text-white">{formatCurrency(category.total)}</p>

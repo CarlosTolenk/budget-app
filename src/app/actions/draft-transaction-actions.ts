@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { serverContainer } from "@/infrastructure/config/server-container";
 import { requireAuth } from "@/lib/auth/require-auth";
+import { toAppUtc } from "@/lib/dates/timezone";
+import { resolvePresetBucket } from "@/lib/buckets/assert-user-bucket";
 import { ActionState } from "./action-state";
 
 const approveSchema = z.object({
@@ -36,6 +38,14 @@ export async function approveDraftAction(_prev: ActionState, formData: FormData)
     const { appUser } = await requireAuth();
     const { approveTransactionDraftUseCase } = serverContainer();
     const { id, ...overrides } = result.data;
+    if (overrides.bucket) {
+      const presetBucket = await resolvePresetBucket(appUser.id, overrides.bucket);
+      overrides.userBucketId = presetBucket.id;
+      delete overrides.bucket;
+    }
+    if (overrides.date) {
+      overrides.date = toAppUtc(overrides.date);
+    }
     await approveTransactionDraftUseCase.execute(appUser.id, id, overrides);
     revalidatePath("/transactions");
     revalidatePath("/");

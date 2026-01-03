@@ -1,6 +1,6 @@
 import { TransactionDraftRepository } from "@/domain/repositories";
 import { CreateDraftInput, TransactionDraft } from "@/domain/transaction-drafts/transaction-draft";
-import { memoryDrafts } from "./memory-data";
+import { memoryBuckets, memoryDrafts } from "./memory-data";
 
 export class MemoryTransactionDraftRepository implements TransactionDraftRepository {
   private data = [...memoryDrafts];
@@ -10,11 +10,14 @@ export class MemoryTransactionDraftRepository implements TransactionDraftReposit
   }
 
   async create(input: CreateDraftInput): Promise<TransactionDraft> {
+    const userBucket = this.resolveBucket(input.userBucketId, input.userId);
     const draft: TransactionDraft = {
       id: `draft-${Math.random().toString(36).slice(2)}`,
       userId: input.userId,
       amount: input.amount,
-      bucket: input.bucket,
+      userBucketId: userBucket.id,
+      userBucket,
+      bucket: userBucket.presetKey,
       categoryId: input.categoryId,
       createdAt: new Date(),
       currency: input.currency,
@@ -39,5 +42,13 @@ export class MemoryTransactionDraftRepository implements TransactionDraftReposit
 
   async findById(id: string, userId: string): Promise<TransactionDraft | null> {
     return this.data.find((draft) => draft.userId === userId && draft.id === id) ?? null;
+  }
+
+  private resolveBucket(userBucketId: string, userId: string) {
+    const bucket = memoryBuckets.find((entry) => entry.id === userBucketId && entry.userId === userId);
+    if (!bucket) {
+      throw new Error("Bucket no encontrado");
+    }
+    return bucket;
   }
 }

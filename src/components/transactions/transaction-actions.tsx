@@ -7,9 +7,9 @@ import { Transaction } from "@/domain/transactions/transaction";
 import { deleteTransactionAction } from "@/app/actions/delete-transaction-action";
 import { updateTransactionAction } from "@/app/actions/update-transaction-action";
 import { initialActionState, type ActionState } from "@/app/actions/action-state";
-import { format } from "date-fns";
 import { ModalConfirmButton } from "@/components/ui/modal-confirm-button";
 import { bucketOptions, type BucketValue } from "@/components/forms/bucket-options";
+import { formatAppDateInput, formatInAppTimezone } from "@/lib/dates/timezone";
 
 interface TransactionActionsProps {
   transaction: Transaction;
@@ -90,7 +90,7 @@ export function TransactionActions({ transaction, categories }: TransactionActio
             <input
               type="date"
               name="date"
-              defaultValue={format(transaction.date, "yyyy-MM-dd")}
+              defaultValue={formatAppDateInput(transaction.date)}
               className="rounded-lg border border-white/10 bg-white/10 px-3 py-1 text-white date-input"
             />
           </label>

@@ -21,7 +21,7 @@ export class RunScheduledTransactionsUseCase {
         userId: item.userId,
         date: item.nextRunDate,
         amount: normalizedAmount,
-        bucket: item.bucket,
+        userBucketId: item.userBucketId,
         categoryId: item.categoryId ?? undefined,
         currency: item.currency,
         merchant: item.merchant ?? undefined,

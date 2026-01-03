@@ -1,6 +1,6 @@
 import { ScheduledTransactionRepository } from "@/domain/repositories";
 import { CreateScheduledTransactionInput, ScheduledTransaction } from "@/domain/scheduled-transactions/scheduled-transaction";
-import { memoryScheduledTransactions } from "./memory-data";
+import { memoryBuckets, memoryScheduledTransactions } from "./memory-data";
 
 export class MemoryScheduledTransactionRepository implements ScheduledTransactionRepository {
   private data = [...memoryScheduledTransactions];
@@ -12,6 +12,7 @@ export class MemoryScheduledTransactionRepository implements ScheduledTransactio
   }
 
   async create(input: CreateScheduledTransactionInput): Promise<ScheduledTransaction> {
+    const bucket = this.resolveBucket(input.userBucketId, input.userId);
     const record: ScheduledTransaction = {
       id: `sched-${Math.random().toString(36).slice(2)}`,
       userId: input.userId,
@@ -19,7 +20,9 @@ export class MemoryScheduledTransactionRepository implements ScheduledTransactio
       amount: input.amount,
       currency: input.currency,
       merchant: input.merchant,
-      bucket: input.bucket,
+      userBucketId: bucket.id,
+      userBucket: bucket,
+      bucket: bucket.presetKey,
       categoryId: input.categoryId,
       recurrence: input.recurrence,
       startDate: input.startDate,
@@ -47,5 +50,13 @@ export class MemoryScheduledTransactionRepository implements ScheduledTransactio
 
   async findDue(date: Date): Promise<ScheduledTransaction[]> {
     return this.data.filter((item) => item.active && item.nextRunDate <= date);
+  }
+
+  private resolveBucket(userBucketId: string, userId: string) {
+    const bucket = memoryBuckets.find((entry) => entry.id === userBucketId && entry.userId === userId);
+    if (!bucket) {
+      throw new Error("Bucket no encontrado");
+    }
+    return bucket;
   }
 }

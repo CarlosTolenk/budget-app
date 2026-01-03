@@ -1,11 +1,10 @@
 import { Category } from "@/domain/categories/category";
 import { CategoryRepository } from "@/domain/repositories";
-import { Bucket } from "@/domain/value-objects/bucket";
 
 interface CreateCategoryInput {
   userId: string;
   name: string;
-  bucket: Bucket;
+  userBucketId: string;
   idealMonthlyAmount: number;
 }
 
@@ -16,7 +15,7 @@ export class CreateCategoryUseCase {
     return this.categoryRepository.create({
       userId: input.userId,
       name: input.name.trim(),
-      bucket: input.bucket,
+      userBucketId: input.userBucketId,
       idealMonthlyAmount: input.idealMonthlyAmount,
     });
   }

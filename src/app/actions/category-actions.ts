@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { serverContainer } from "@/infrastructure/config/server-container";
 import { requireAuth } from "@/lib/auth/require-auth";
+import { resolvePresetBucket } from "@/lib/buckets/assert-user-bucket";
 import { ActionState } from "./action-state";
 
 const amountSchema = z.preprocess(
@@ -37,8 +38,14 @@ export async function createCategoryAction(_prevState: ActionState, formData: Fo
 
   try {
     const { appUser } = await requireAuth();
+    const presetBucket = await resolvePresetBucket(appUser.id, result.data.bucket);
     const { createCategoryUseCase } = serverContainer();
-    await createCategoryUseCase.execute({ userId: appUser.id, ...result.data });
+    await createCategoryUseCase.execute({
+      userId: appUser.id,
+      name: result.data.name,
+      userBucketId: presetBucket.id,
+      idealMonthlyAmount: result.data.idealMonthlyAmount,
+    });
     revalidatePath("/");
     revalidatePath("/budget");
     revalidatePath("/transactions");
@@ -70,8 +77,15 @@ export async function updateCategoryAction(_prevState: ActionState, formData: Fo
 
   try {
     const { appUser } = await requireAuth();
+    const presetBucket = await resolvePresetBucket(appUser.id, result.data.bucket);
     const { updateCategoryUseCase } = serverContainer();
-    await updateCategoryUseCase.execute({ userId: appUser.id, ...result.data });
+    await updateCategoryUseCase.execute({
+      userId: appUser.id,
+      id: result.data.id,
+      name: result.data.name,
+      userBucketId: presetBucket.id,
+      idealMonthlyAmount: result.data.idealMonthlyAmount,
+    });
     revalidatePath("/");
     revalidatePath("/budget");
     revalidatePath("/transactions");

@@ -1,21 +1,22 @@
-import { endOfMonth, parseISO, startOfMonth } from "date-fns";
 import { Prisma, Transaction as PrismaTransaction } from "@prisma/client";
 import { TransactionRepository } from "@/domain/repositories";
 import { CreateTransactionInput, Transaction } from "@/domain/transactions/transaction";
 import { prisma } from "@/infrastructure/db/prisma-client";
+import { getMonthUtcRange } from "@/lib/dates/get-month-utc-range";
 
 export class PrismaTransactionRepository implements TransactionRepository {
   async findByMonth(monthId: string, userId: string): Promise<Transaction[]> {
-    const monthDate = parseISO(`${monthId}-01`);
+    const { startUtc, endUtc } = getMonthUtcRange(monthId);
     const records = await prisma.transaction.findMany({
       where: {
         userId,
         date: {
-          gte: startOfMonth(monthDate),
-          lte: endOfMonth(monthDate),
+          gte: startUtc,
+          lt: endUtc,
         },
       },
       orderBy: { date: "desc" },
+      include: { userBucket: true },
     });
 
     return records.map(this.mapTransaction);
@@ -25,6 +26,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
     const records = await prisma.transaction.findMany({
       where: { userId },
       orderBy: { date: "desc" },
+      include: { userBucket: true },
     });
 
     return records.map(this.mapTransaction);
@@ -34,6 +36,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
     const records = await prisma.transaction.findMany({
       where: { userId },
       orderBy: { date: "desc" },
+      include: { userBucket: true },
       take: limit,
     });
 
@@ -41,7 +44,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
   }
 
   async findByEmailMessageId(emailMessageId: string, userId: string): Promise<Transaction | null> {
-    const record = await prisma.transaction.findFirst({ where: { emailMessageId, userId } });
+    const record = await prisma.transaction.findFirst({ where: { emailMessageId, userId }, include: { userBucket: true } });
     return record ? this.mapTransaction(record) : null;
   }
 
@@ -64,6 +67,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
         ...transaction,
         rawPayload: transaction.rawPayload ? (transaction.rawPayload as Prisma.InputJsonValue) : Prisma.JsonNull,
       },
+      include: { userBucket: true },
     });
     return this.mapTransaction(record);
   }
@@ -84,6 +88,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
               : Prisma.JsonNull
             : undefined,
       },
+      include: { userBucket: true },
     });
     return this.mapTransaction(record);
   }
@@ -92,12 +97,24 @@ export class PrismaTransactionRepository implements TransactionRepository {
     await prisma.transaction.deleteMany({ where: { id, userId } });
   }
 
-  private mapTransaction(record: PrismaTransaction): Transaction {
+  private mapTransaction(record: PrismaTransaction & { userBucket: Prisma.UserBucket }): Transaction {
     return {
       id: record.id,
       userId: record.userId,
       amount: Number(record.amount),
-      bucket: record.bucket,
+      userBucketId: record.userBucketId,
+      userBucket: {
+        id: record.userBucket.id,
+        userId: record.userBucket.userId,
+        name: record.userBucket.name,
+        sortOrder: record.userBucket.sortOrder,
+        color: record.userBucket.color,
+        mode: record.userBucket.mode,
+        presetKey: record.userBucket.presetKey,
+        createdAt: record.userBucket.createdAt,
+        updatedAt: record.userBucket.updatedAt,
+      },
+      bucket: record.userBucket.presetKey,
       categoryId: record.categoryId,
       createdAt: record.createdAt,
       currency: record.currency,

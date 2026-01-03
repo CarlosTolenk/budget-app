@@ -1,10 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { format } from "date-fns";
-import { BudgetRepository } from "@/domain/repositories";
+import { BudgetRepository, UserBucketRepository } from "@/domain/repositories";
 import { Budget } from "@/domain/budget/budget";
+import { PresetBucketKey } from "@/domain/user-buckets/user-bucket";
 
 export class UpsertBudgetUseCase {
-  constructor(private readonly budgetRepository: BudgetRepository) {}
+  constructor(
+    private readonly budgetRepository: BudgetRepository,
+    private readonly userBucketRepository: UserBucketRepository,
+  ) {}
 
   async execute(input: { userId: string; month?: string; income: number }): Promise<Budget> {
     const month = input.month ?? format(new Date(), "yyyy-MM");
@@ -12,20 +16,32 @@ export class UpsertBudgetUseCase {
     const income = input.income;
 
     const targets = this.resolveTargets(income);
+    const userBuckets = await this.userBucketRepository.listByUserId(input.userId);
+    const bucketMap = new Map<PresetBucketKey, string>();
+    userBuckets.forEach((bucket) => {
+      if (bucket.presetKey) {
+        bucketMap.set(bucket.presetKey, bucket.id);
+      }
+    });
 
-    const budget: Budget = {
+    const buckets = (["NEEDS", "WANTS", "SAVINGS"] as PresetBucketKey[])
+      .map((key) => {
+        const userBucketId = bucketMap.get(key);
+        if (!userBucketId) {
+          return null;
+        }
+        return { userBucketId, targetAmount: targets[`${key.toLowerCase()}Target` as const] };
+      })
+      .filter((entry): entry is { userBucketId: string; targetAmount: number } => Boolean(entry));
+
+    const budget = await this.budgetRepository.upsert({
       id: current?.id ?? randomUUID(),
       userId: current?.userId ?? input.userId,
       month,
       income,
-      needsTarget: targets.needsTarget,
-      wantsTarget: targets.wantsTarget,
-      savingsTarget: targets.savingsTarget,
-      createdAt: current?.createdAt ?? new Date(),
-      updatedAt: new Date(),
-    };
+      buckets,
+    });
 
-    await this.budgetRepository.upsert(budget);
     return budget;
   }
 

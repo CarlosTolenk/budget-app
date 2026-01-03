@@ -5,6 +5,7 @@ import { Category } from "@/domain/categories/category";
 import { createScheduledTransactionAction } from "@/app/actions/scheduled-transaction-actions";
 import { initialActionState } from "@/app/actions/action-state";
 import { bucketOptions, pickDefaultBucket, type BucketValue } from "@/components/forms/bucket-options";
+import { formatAppDateInput } from "@/lib/dates/timezone";
 
 export function ScheduledTransactionForm({ categories }: { categories: Category[] }) {
   const [bucket, setBucket] = useState<BucketValue>(() => pickDefaultBucket(categories));
@@ -26,7 +27,7 @@ export function ScheduledTransactionForm({ categories }: { categories: Category[
 
   const canSubmit = filteredCategories.length > 0 && Boolean(resolvedCategoryId);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = formatAppDateInput(new Date());
 
   return (
     <form action={formAction} className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm">

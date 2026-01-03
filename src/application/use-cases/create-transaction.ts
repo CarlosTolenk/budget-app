@@ -1,6 +1,5 @@
 import { Transaction } from "@/domain/transactions/transaction";
 import { TransactionRepository } from "@/domain/repositories";
-import { Bucket } from "@/domain/value-objects/bucket";
 
 interface CreateTransactionInput {
   userId: string;
@@ -8,7 +7,7 @@ interface CreateTransactionInput {
   amount: number;
   currency: string;
   merchant?: string;
-  bucket: Bucket;
+  userBucketId: string;
   categoryId?: string;
 }
 
@@ -22,7 +21,7 @@ export class CreateTransactionUseCase {
       amount: input.amount,
       currency: input.currency,
       merchant: input.merchant,
-      bucket: input.bucket,
+      userBucketId: input.userBucketId,
       categoryId: input.categoryId,
       source: "MANUAL",
     });

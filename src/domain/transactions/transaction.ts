@@ -1,4 +1,4 @@
-import { Bucket } from "../value-objects/bucket";
+import { UserBucket, PresetBucketKey } from "@/domain/user-buckets/user-bucket";
 
 export type TransactionSource = "EMAIL" | "MANUAL" | "SCHEDULED";
 
@@ -10,7 +10,9 @@ export interface Transaction {
   currency: string;
   merchant?: string | null;
   categoryId?: string | null;
-  bucket: Bucket;
+  userBucketId: string;
+  userBucket: UserBucket;
+  bucket?: PresetBucketKey | null;
   source: TransactionSource;
   emailMessageId?: string | null;
   rawPayload?: Record<string, unknown> | null;
@@ -26,7 +28,7 @@ export interface CreateTransactionInput {
   currency: string;
   merchant?: string;
   categoryId?: string;
-  bucket: Bucket;
+  userBucketId: string;
   source: TransactionSource;
   emailMessageId?: string;
   rawPayload?: Record<string, unknown> | null;

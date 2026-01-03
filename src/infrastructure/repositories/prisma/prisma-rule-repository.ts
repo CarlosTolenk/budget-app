@@ -8,20 +8,28 @@ export class PrismaRuleRepository implements RuleRepository {
     return records.map((record) => this.map(record));
   }
 
-  async create(input: { userId: string; pattern: string; priority?: number; categoryId: string }): Promise<Rule> {
+  async create(input: { userId: string; pattern: string; priority?: number; categoryId: string; userBucketId: string }): Promise<Rule> {
     const record = await prisma.rule.create({
       data: {
         userId: input.userId,
         pattern: input.pattern,
         priority: input.priority ?? 0,
         categoryId: input.categoryId,
+        userBucketId: input.userBucketId,
       },
     });
 
     return this.map(record);
   }
 
-  async update(input: { id: string; userId: string; pattern: string; priority?: number; categoryId: string }): Promise<Rule> {
+  async update(input: {
+    id: string;
+    userId: string;
+    pattern: string;
+    priority?: number;
+    categoryId: string;
+    userBucketId: string;
+  }): Promise<Rule> {
     const existing = await prisma.rule.findFirst({ where: { id: input.id, userId: input.userId } });
     if (!existing) {
       throw new Error("Regla no encontrada");
@@ -33,6 +41,7 @@ export class PrismaRuleRepository implements RuleRepository {
         pattern: input.pattern,
         priority: input.priority ?? 0,
         categoryId: input.categoryId,
+        userBucketId: input.userBucketId,
       },
     });
 
@@ -49,6 +58,7 @@ export class PrismaRuleRepository implements RuleRepository {
   private map(record: {
     id: string;
     userId: string;
+    userBucketId: string;
     pattern: string;
     priority: number;
     categoryId: string;
@@ -58,6 +68,7 @@ export class PrismaRuleRepository implements RuleRepository {
     return {
       id: record.id,
       userId: record.userId,
+      userBucketId: record.userBucketId,
       pattern: record.pattern,
       priority: record.priority,
       categoryId: record.categoryId,

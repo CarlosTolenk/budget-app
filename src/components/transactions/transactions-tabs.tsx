@@ -2,12 +2,12 @@
 
 import { useActionState, useMemo, useState, useTransition } from "react";
 import clsx from "clsx";
-import { format, startOfMonth } from "date-fns";
 import { Category } from "@/domain/categories/category";
 import { Transaction, TransactionSource } from "@/domain/transactions/transaction";
 import { ScheduledTransaction } from "@/domain/scheduled-transactions/scheduled-transaction";
 import { TransactionDraft } from "@/domain/transaction-drafts/transaction-draft";
 import { formatCurrency } from "@/lib/format";
+import { formatAppDateInput, formatInAppTimezone, getAppDateRange } from "@/lib/dates/timezone";
 import { TransactionForm } from "@/components/forms/transaction-form";
 import { TransactionActions } from "@/components/transactions/transaction-actions";
 import { ScheduledTransactionForm } from "@/components/forms/scheduled-transaction-form";
@@ -89,8 +89,11 @@ function ManualPanel({ manual, categories }: { manual: Transaction[]; categories
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<"all" | string>("all");
   const [bucketFilter, setBucketFilter] = useState<"all" | BucketValue>("all");
-  const [startDate, setStartDate] = useState(() => format(startOfMonth(new Date()), "yyyy-MM-dd"));
-  const [endDate, setEndDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  const [startDate, setStartDate] = useState(() => {
+    const today = formatAppDateInput(new Date());
+    return `${today.slice(0, 7)}-01`;
+  });
+  const [endDate, setEndDate] = useState(() => formatAppDateInput(new Date()));
   const [minAmount, setMinAmount] = useState("");
   const [maxAmount, setMaxAmount] = useState("");
   const [page, setPage] = useState(1);
@@ -110,15 +113,8 @@ function ManualPanel({ manual, categories }: { manual: Transaction[]; categories
     const max = maxAmount ? Number(maxAmount) : undefined;
     const minValue = typeof min === "number" && !Number.isNaN(min) ? Math.abs(min) : undefined;
     const maxValue = typeof max === "number" && !Number.isNaN(max) ? Math.abs(max) : undefined;
-    const start = startDate ? new Date(startDate) : undefined;
-    const end = endDate ? new Date(endDate) : undefined;
-
-    if (start) {
-      start.setHours(0, 0, 0, 0);
-    }
-    if (end) {
-      end.setHours(23, 59, 59, 999);
-    }
+    const start = startDate ? getAppDateRange(startDate).startUtc : undefined;
+    const end = endDate ? getAppDateRange(endDate).endUtc : undefined;
 
     return [...manual]
       .filter((transaction) => {
@@ -137,7 +133,7 @@ function ManualPanel({ manual, categories }: { manual: Transaction[]; categories
         if (start && transaction.date < start) {
           return false;
         }
-        if (end && transaction.date > end) {
+        if (end && transaction.date >= end) {
           return false;
         }
         const normalizedAmount = Math.abs(transaction.amount);
@@ -316,7 +312,10 @@ function ManualPanel({ manual, categories }: { manual: Transaction[]; categories
                       <p className="font-semibold text-white">{transaction.merchant ?? "Sin descripción"}</p>
                       <p className="text-xs text-slate-400">
                         {bucketLabel}
-                        <span className="sm:hidden"> · {format(transaction.date, "dd MMM yyyy")}</span>
+                        <span className="sm:hidden">
+                          {" "}
+                          · {formatInAppTimezone(transaction.date, { day: "2-digit", month: "short", year: "numeric" }).replace(".", "")}
+                        </span>
                       </p>
                       <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-400 sm:hidden">
                         <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-slate-300">
@@ -330,7 +329,7 @@ function ManualPanel({ manual, categories }: { manual: Transaction[]; categories
                       <span className={sourceBadgeClass}>{sourceInfo.label}</span>
                     </td>
                     <td className="hidden py-3 pr-4 align-top text-slate-100 md:table-cell">
-                      {format(transaction.date, "dd MMM yyyy")}
+                      {formatInAppTimezone(transaction.date, { day: "2-digit", month: "short", year: "numeric" }).replace(".", "")}
                     </td>
                     <td
                       className={clsx(
@@ -408,7 +407,9 @@ function ScheduledPanel({ scheduled, categories }: { scheduled: ScheduledTransac
             <div key={plan.id} className="rounded-xl border border-white/10 p-4 text-sm">
               <p className="font-semibold">{plan.name}</p>
               <p className="text-xs text-slate-400">
-                Próxima ejecución: {format(plan.nextRunDate, "dd MMM yyyy")} · {plan.recurrence}
+                Próxima ejecución:{" "}
+                {formatInAppTimezone(plan.nextRunDate, { day: "2-digit", month: "short", year: "numeric" }).replace(".", "")} ·{" "}
+                {plan.recurrence}
               </p>
               <p className="text-sm text-slate-200">{formatCurrency(plan.amount, plan.currency)}</p>
               <form action={deleteAction} className="mt-2 text-right">
@@ -642,7 +643,7 @@ function DraftCard({ draft, categories }: { draft: TransactionDraft; categories:
         <div>
           <p className="font-semibold">{draft.merchant ?? "Borrador sin descripción"}</p>
           <p className="text-xs text-slate-400">
-            {format(draft.date, "dd MMM yyyy")} · {bucketLabel} · {adapterLabel}
+            {formatInAppTimezone(draft.date, { day: "2-digit", month: "short", year: "numeric" }).replace(".", "")} · {bucketLabel} · {adapterLabel}
           </p>
         </div>
         <div className="text-right">
@@ -697,7 +698,12 @@ function DraftCard({ draft, categories }: { draft: TransactionDraft; categories:
             <input type="hidden" name="draftId" value={draft.id} />
             <label className="flex flex-col gap-1 text-[11px] uppercase tracking-wide text-slate-400">
               Fecha
-              <input type="date" name="date" defaultValue={format(draft.date, "yyyy-MM-dd")} className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white date-input" />
+              <input
+                type="date"
+                name="date"
+                defaultValue={formatAppDateInput(draft.date)}
+                className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white date-input"
+              />
             </label>
         <label className="flex flex-col gap-1 text-[11px] uppercase tracking-wide text-slate-400">
           Monto

@@ -5,6 +5,7 @@ import { createTransactionAction } from "@/app/actions/transaction-actions";
 import { initialActionState } from "@/app/actions/action-state";
 import { Category } from "@/domain/categories/category";
 import { bucketOptions, pickDefaultBucket, type BucketValue } from "@/components/forms/bucket-options";
+import { formatAppDateInput } from "@/lib/dates/timezone";
 
 interface TransactionFormProps {
   categories: Category[];
@@ -12,7 +13,7 @@ interface TransactionFormProps {
 
 export function TransactionForm({ categories }: TransactionFormProps) {
   const [state, formAction] = useActionState(createTransactionAction, initialActionState);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = formatAppDateInput(new Date());
   const [bucket, setBucket] = useState<BucketValue>(() => pickDefaultBucket(categories));
   const [categoryId, setCategoryId] = useState("");
 

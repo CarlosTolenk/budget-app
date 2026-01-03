@@ -6,29 +6,96 @@ import { Income } from "@/domain/income/income";
 import { ScheduledTransaction } from "@/domain/scheduled-transactions/scheduled-transaction";
 import { TransactionDraft } from "@/domain/transaction-drafts/transaction-draft";
 import { AppUser } from "@/domain/users/user";
+import { UserBucket } from "@/domain/user-buckets/user-bucket";
 
 const now = new Date();
 const monthId = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 export const memoryUserId = "memory-user";
+
+export const memoryBuckets: UserBucket[] = [
+  {
+    id: "bucket-needs",
+    userId: memoryUserId,
+    name: "Necesarios",
+    sortOrder: 0,
+    color: null,
+    mode: "PRESET",
+    presetKey: "NEEDS",
+    createdAt: now,
+    updatedAt: now,
+  },
+  {
+    id: "bucket-wants",
+    userId: memoryUserId,
+    name: "Prescindibles",
+    sortOrder: 1,
+    color: null,
+    mode: "PRESET",
+    presetKey: "WANTS",
+    createdAt: now,
+    updatedAt: now,
+  },
+  {
+    id: "bucket-savings",
+    userId: memoryUserId,
+    name: "Ahorro",
+    sortOrder: 2,
+    color: null,
+    mode: "PRESET",
+    presetKey: "SAVINGS",
+    createdAt: now,
+    updatedAt: now,
+  },
+];
+
+const [needsBucket, wantsBucket, savingsBucket] = memoryBuckets;
 
 export const memoryBudget: Budget = {
   id: "budget-1",
   userId: memoryUserId,
   month: monthId,
   income: 5200,
-  needsTarget: 2600,
-  wantsTarget: 1560,
-  savingsTarget: 1040,
   createdAt: now,
   updatedAt: now,
+  buckets: [
+    {
+      id: "budget-bucket-needs",
+      budgetId: "budget-1",
+      userBucketId: memoryBuckets[0].id,
+      userBucket: memoryBuckets[0],
+      targetAmount: 2600,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: "budget-bucket-wants",
+      budgetId: "budget-1",
+      userBucketId: memoryBuckets[1].id,
+      userBucket: memoryBuckets[1],
+      targetAmount: 1560,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: "budget-bucket-savings",
+      budgetId: "budget-1",
+      userBucketId: memoryBuckets[2].id,
+      userBucket: memoryBuckets[2],
+      targetAmount: 1040,
+      createdAt: now,
+      updatedAt: now,
+    },
+  ],
 };
 
 export const memoryCategories: Category[] = [
   {
     id: "cat-groceries",
     userId: memoryUserId,
+    userBucketId: needsBucket.id,
+    userBucket: needsBucket,
+    bucket: needsBucket.presetKey,
     name: "Groceries",
-    bucket: "NEEDS",
     idealMonthlyAmount: 400,
     createdAt: now,
     updatedAt: now,
@@ -36,8 +103,10 @@ export const memoryCategories: Category[] = [
   {
     id: "cat-rent",
     userId: memoryUserId,
+    userBucketId: needsBucket.id,
+    userBucket: needsBucket,
+    bucket: needsBucket.presetKey,
     name: "Rent",
-    bucket: "NEEDS",
     idealMonthlyAmount: 1600,
     createdAt: now,
     updatedAt: now,
@@ -45,8 +114,10 @@ export const memoryCategories: Category[] = [
   {
     id: "cat-fun",
     userId: memoryUserId,
+    userBucketId: wantsBucket.id,
+    userBucket: wantsBucket,
+    bucket: wantsBucket.presetKey,
     name: "Fun",
-    bucket: "WANTS",
     idealMonthlyAmount: 200,
     createdAt: now,
     updatedAt: now,
@@ -54,8 +125,10 @@ export const memoryCategories: Category[] = [
   {
     id: "cat-savings",
     userId: memoryUserId,
+    userBucketId: savingsBucket.id,
+    userBucket: savingsBucket,
+    bucket: savingsBucket.presetKey,
     name: "Emergency Fund",
-    bucket: "SAVINGS",
     idealMonthlyAmount: 500,
     createdAt: now,
     updatedAt: now,
@@ -87,6 +160,7 @@ export const memoryRules: Rule[] = [
   {
     id: "rule1",
     userId: memoryUserId,
+    userBucketId: needsBucket.id,
     pattern: "supermarket",
     priority: 10,
     categoryId: "cat-groceries",
@@ -100,7 +174,9 @@ export const memoryTransactions: Transaction[] = [
     id: "txn-1",
     userId: memoryUserId,
     amount: -120.45,
-    bucket: "NEEDS",
+    userBucketId: needsBucket.id,
+    userBucket: needsBucket,
+    bucket: needsBucket.presetKey,
     categoryId: "cat-groceries",
     createdAt: now,
     currency: "DOP",
@@ -115,7 +191,9 @@ export const memoryTransactions: Transaction[] = [
     id: "txn-2",
     userId: memoryUserId,
     amount: -80,
-    bucket: "WANTS",
+    userBucketId: wantsBucket.id,
+    userBucket: wantsBucket,
+    bucket: wantsBucket.presetKey,
     categoryId: "cat-fun",
     createdAt: now,
     currency: "DOP",
@@ -130,7 +208,9 @@ export const memoryTransactions: Transaction[] = [
     id: "txn-3",
     userId: memoryUserId,
     amount: -1600,
-    bucket: "NEEDS",
+    userBucketId: needsBucket.id,
+    userBucket: needsBucket,
+    bucket: needsBucket.presetKey,
     categoryId: "cat-rent",
     createdAt: now,
     currency: "DOP",
@@ -151,7 +231,9 @@ export const memoryScheduledTransactions: ScheduledTransaction[] = [
     amount: -1600,
     currency: "DOP",
     merchant: "Landlord",
-    bucket: "NEEDS",
+    userBucketId: needsBucket.id,
+    userBucket: needsBucket,
+    bucket: needsBucket.presetKey,
     categoryId: "cat-rent",
     recurrence: "MONTHLY",
     startDate: new Date(now.getFullYear(), now.getMonth(), 1),

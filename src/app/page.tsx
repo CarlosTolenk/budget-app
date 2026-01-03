@@ -2,7 +2,7 @@ import { format } from "date-fns";
 import clsx from "clsx";
 import { bucketCopy } from "@/domain/value-objects/bucket";
 import { serverContainer } from "@/infrastructure/config/server-container";
-import { formatCurrency, formatMonthLabel, formatPercent } from "@/lib/format";
+import { formatCurrency, formatInAppTimezone, formatMonthLabel, formatPercent } from "@/lib/format";
 import { YearlyChart } from "@/components/dashboard/yearly-chart";
 import { MonthSwitcher } from "@/components/dashboard/month-switcher";
 import { unstable_noStore as noStore } from "next/cache";
@@ -176,7 +176,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 <div>
                   <p className="font-medium">{transaction.merchant}</p>
                   <p className="text-xs text-slate-400">
-                    {format(transaction.date, "dd MMM")} · {bucketCopy[transaction.bucket]?.label ?? transaction.bucket}
+                    {formatInAppTimezone(transaction.date, { day: "2-digit", month: "short" }).replace(".", "")} ·{" "}
+                    {bucketCopy[transaction.bucket]?.label ?? transaction.bucket}
                   </p>
                 </div>
                 <p

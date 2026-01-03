@@ -1,11 +1,13 @@
-import { Bucket } from "@/domain/value-objects/bucket";
+import { PresetBucketKey, UserBucket } from "@/domain/user-buckets/user-bucket";
 
 export interface BucketProgress {
-  bucket: Bucket;
+  bucketId: string;
+  bucket: PresetBucketKey;
+  bucketDetails: UserBucket;
   spent: number;
   target: number;
-  targetRatio: number;
   planned: number;
+  targetRatio?: number | null;
 }
 
 export interface DashboardSummary {

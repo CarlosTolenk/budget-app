@@ -1,10 +1,12 @@
-import { Bucket } from "../value-objects/bucket";
+import { UserBucket, PresetBucketKey } from "@/domain/user-buckets/user-bucket";
 
 export interface Category {
   id: string;
   userId: string;
   name: string;
-  bucket: Bucket;
+  userBucketId: string;
+  userBucket: UserBucket;
+  bucket?: PresetBucketKey | null;
   idealMonthlyAmount: number;
   createdAt: Date;
   updatedAt: Date;

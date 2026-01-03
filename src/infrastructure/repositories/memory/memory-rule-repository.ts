@@ -9,10 +9,11 @@ export class MemoryRuleRepository implements RuleRepository {
     return this.rules.filter((rule) => rule.userId === userId);
   }
 
-  async create(input: { userId: string; pattern: string; priority?: number; categoryId: string }): Promise<Rule> {
+  async create(input: { userId: string; pattern: string; priority?: number; categoryId: string; userBucketId: string }): Promise<Rule> {
     const rule: Rule = {
       id: `rule-${Math.random().toString(36).slice(2)}`,
       userId: input.userId,
+      userBucketId: input.userBucketId,
       pattern: input.pattern,
       priority: input.priority ?? 0,
       categoryId: input.categoryId,
@@ -24,7 +25,14 @@ export class MemoryRuleRepository implements RuleRepository {
     return rule;
   }
 
-  async update(input: { id: string; userId: string; pattern: string; priority?: number; categoryId: string }): Promise<Rule> {
+  async update(input: {
+    id: string;
+    userId: string;
+    pattern: string;
+    priority?: number;
+    categoryId: string;
+    userBucketId: string;
+  }): Promise<Rule> {
     const index = this.rules.findIndex((rule) => rule.id === input.id && rule.userId === input.userId);
     if (index === -1) {
       throw new Error("Regla no encontrada");
@@ -35,6 +43,7 @@ export class MemoryRuleRepository implements RuleRepository {
       pattern: input.pattern,
       priority: input.priority ?? 0,
       categoryId: input.categoryId,
+      userBucketId: input.userBucketId,
       updatedAt: new Date(),
     };
     this.rules[index] = updated;
