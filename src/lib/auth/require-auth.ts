@@ -12,17 +12,14 @@ export interface AuthenticatedUser {
   appUser: AppUser;
 }
 
-export async function requireAuth(): Promise<AuthenticatedUser> {
+export async function getAuthenticatedUser(): Promise<AuthenticatedUser | null> {
   const supabase = await getSupabaseServerClient();
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
   if (!session) {
-    const headerStore = await headers();
-    const requestPath = headerStore.get("next-url") ?? "/";
-    const from = requestPath && requestPath !== "/login" ? `?from=${encodeURIComponent(requestPath)}` : "";
-    redirect(`/login${from}`);
+    return null;
   }
 
   const supabaseUser = {
@@ -30,6 +27,23 @@ export async function requireAuth(): Promise<AuthenticatedUser> {
     email: session.user.email,
   };
 
+  const appUser = await resolveAppUser(supabaseUser);
+  return { supabaseUser, appUser };
+}
+
+export async function requireAuth(): Promise<AuthenticatedUser> {
+  const authenticatedUser = await getAuthenticatedUser();
+  if (authenticatedUser) {
+    return authenticatedUser;
+  }
+
+  const headerStore = await headers();
+  const requestPath = headerStore.get("next-url") ?? "/";
+  const from = requestPath && requestPath !== "/login" ? `?from=${encodeURIComponent(requestPath)}` : "";
+  redirect(`/login${from}`);
+}
+
+async function resolveAppUser(supabaseUser: { id: string; email?: string | null }): Promise<AppUser> {
   const { userRepository } = serverContainer();
   let appUser = await userRepository.findBySupabaseId(supabaseUser.id);
 
@@ -50,5 +64,5 @@ export async function requireAuth(): Promise<AuthenticatedUser> {
     appUser = await userRepository.update(appUser.id, { email: supabaseUser.email });
   }
 
-  return { supabaseUser, appUser };
+  return appUser;
 }

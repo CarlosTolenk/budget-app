@@ -169,6 +169,7 @@ export const memoryUsers: AppUser[] = [
     id: memoryUserId,
     supabaseUserId: null,
     email: "memory@example.com",
+    bucketMode: "PRESET",
     createdAt: now,
     updatedAt: now,
   },

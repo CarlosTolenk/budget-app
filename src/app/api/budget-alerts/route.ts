@@ -1,7 +1,7 @@
 import { format } from "date-fns";
 import { NextResponse } from "next/server";
 import { serverContainer } from "@/infrastructure/config/server-container";
-import { requireAuth } from "@/lib/auth/require-auth";
+import { getAuthenticatedUser } from "@/lib/auth/require-auth";
 import { Transaction } from "@/domain/transactions/transaction";
 import { Category } from "@/domain/categories/category";
 import { Bucket } from "@/domain/value-objects/bucket";
@@ -23,7 +23,11 @@ export async function GET(request: Request) {
     const monthRegex = /^\d{4}-\d{2}$/;
     const month = monthParam && monthRegex.test(monthParam) ? monthParam : format(new Date(), "yyyy-MM");
 
-    const { appUser } = await requireAuth();
+    const authenticatedUser = await getAuthenticatedUser();
+    if (!authenticatedUser) {
+      return NextResponse.json({ alerts: [], error: "No autorizado." }, { status: 401 });
+    }
+    const { appUser } = authenticatedUser;
     const container = serverContainer();
 
     const [transactions, categories] = await Promise.all([
