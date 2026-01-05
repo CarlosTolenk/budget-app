@@ -7,14 +7,16 @@ import { initialActionState } from "@/app/actions/action-state";
 import { deleteCategoryAction, updateCategoryAction } from "@/app/actions/category-actions";
 import { formatCurrency } from "@/lib/format";
 import { ModalConfirmButton } from "@/components/ui/modal-confirm-button";
-import { bucketOptions } from "@/components/forms/bucket-options";
-import { bucketCopy } from "@/domain/value-objects/bucket";
+import { UserBucket } from "@/domain/user-buckets/user-bucket";
+import { BucketMode } from "@/domain/users/user";
 
 interface CategoryManagerProps {
   categories: Category[];
+  userBuckets: UserBucket[];
+  bucketMode: BucketMode;
 }
 
-export function CategoryManager({ categories }: CategoryManagerProps) {
+export function CategoryManager({ categories, userBuckets, bucketMode }: CategoryManagerProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [state, formAction] = useActionState(updateCategoryAction, initialActionState);
   const [deleteState, deleteAction] = useActionState(deleteCategoryAction, initialActionState);
@@ -33,6 +35,7 @@ export function CategoryManager({ categories }: CategoryManagerProps) {
   useEffect(() => {
     if (deleteState.status === "success") {
       router.refresh();
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCategoryToDelete(null);
       if (editingId && categoryToDelete && editingId === categoryToDelete.id) {
         setEditingId(null);
@@ -40,10 +43,15 @@ export function CategoryManager({ categories }: CategoryManagerProps) {
     }
   }, [deleteState, router, editingId, categoryToDelete]);
 
-  const sorted = useMemo(
-    () => [...categories].sort((a, b) => a.name.localeCompare(b.name)),
-    [categories],
+  const sorted = useMemo(() => [...categories].sort((a, b) => a.name.localeCompare(b.name)), [categories]);
+  const availableBuckets = useMemo(
+    () => userBuckets.filter((bucket) => bucket.mode === bucketMode),
+    [userBuckets, bucketMode],
   );
+  const selectBuckets = availableBuckets.length ? availableBuckets : userBuckets;
+  const bucketNameMap = useMemo(() => {
+    return new Map(userBuckets.map((bucket) => [bucket.id, bucket.name]));
+  }, [userBuckets]);
 
   return (
     <div className="flex h-[460px] flex-col rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
@@ -78,16 +86,20 @@ export function CategoryManager({ categories }: CategoryManagerProps) {
                       <label className="text-[11px] uppercase tracking-wide text-slate-400">
                         Renglón
                         <select
-                          name="bucket"
-                          defaultValue={category.bucket ?? "NEEDS"}
+                          name="userBucketId"
+                          defaultValue={category.userBucketId}
                           className="mt-1 rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
+                          disabled={!selectBuckets.length}
                         >
-                          {bucketOptions.map((option) => (
-                            <option key={option.value} value={option.value} className="text-slate-900">
-                              {option.label}
+                          {selectBuckets.map((bucket) => (
+                            <option key={bucket.id} value={bucket.id} className="text-slate-900">
+                              {bucket.name}
                             </option>
                           ))}
                         </select>
+                        {!selectBuckets.length ? (
+                          <span className="text-[10px] text-rose-300">No hay buckets disponibles en este modo.</span>
+                        ) : null}
                       </label>
                       <label className="text-[11px] uppercase tracking-wide text-slate-400">
                         Monto ideal
@@ -117,7 +129,7 @@ export function CategoryManager({ categories }: CategoryManagerProps) {
                 );
               }
 
-              const bucketLabel = category.bucket ? bucketCopy[category.bucket]?.label ?? category.bucket : "Sin renglón";
+              const bucketLabel = bucketNameMap.get(category.userBucketId) ?? "Sin renglón";
 
               return (
                 <li key={category.id} className="flex flex-col gap-2 rounded-xl border border-white/10 p-3 md:flex-row md:items-center md:justify-between">
@@ -160,7 +172,7 @@ export function CategoryManager({ categories }: CategoryManagerProps) {
             <p className="text-base font-semibold text-white">Eliminar categoría</p>
             <p className="mt-2 text-slate-300">
               ¿Seguro que deseas eliminar <span className="font-semibold text-white">{categoryToDelete.name}</span> del renglón{" "}
-              {categoryToDelete.bucket ? bucketCopy[categoryToDelete.bucket]?.label ?? categoryToDelete.bucket : "Sin renglón"}? Esta acción no se puede deshacer.
+              {bucketNameMap.get(categoryToDelete.userBucketId) ?? "Sin renglón"}? Esta acción no se puede deshacer.
             </p>
             {deleteState.status === "error" && deleteState.message && (
               <p className="mt-3 text-xs text-rose-300">{deleteState.message}</p>

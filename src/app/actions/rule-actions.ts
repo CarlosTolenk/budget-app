@@ -5,13 +5,13 @@ import { z } from "zod";
 import { serverContainer } from "@/infrastructure/config/server-container";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { ActionState } from "./action-state";
-import { resolvePresetBucket } from "@/lib/buckets/assert-user-bucket";
+import { assertUserBucket } from "@/lib/buckets/assert-user-bucket";
 
 const schema = z.object({
   pattern: z.string().min(1),
   priority: z.coerce.number().optional(),
   categoryId: z.string().min(1),
-  bucket: z.enum(["NEEDS", "WANTS", "SAVINGS"]),
+  userBucketId: z.string().min(3),
 });
 
 const updateSchema = z.object({
@@ -19,7 +19,7 @@ const updateSchema = z.object({
   pattern: z.string().min(1),
   priority: z.coerce.number().optional(),
   categoryId: z.string().min(1),
-  bucket: z.enum(["NEEDS", "WANTS", "SAVINGS"]),
+  userBucketId: z.string().min(3),
 });
 
 const deleteSchema = z.object({ id: z.string().min(1) });
@@ -29,7 +29,7 @@ export async function createRuleAction(_prevState: ActionState, formData: FormDa
     pattern: formData.get("pattern"),
     priority: formData.get("priority") ?? undefined,
     categoryId: formData.get("categoryId"),
-    bucket: formData.get("bucket"),
+    userBucketId: formData.get("userBucketId"),
   });
 
   if (!result.success) {
@@ -39,13 +39,13 @@ export async function createRuleAction(_prevState: ActionState, formData: FormDa
   try {
     const { appUser } = await requireAuth();
     const { createRuleUseCase, listCategoriesUseCase } = serverContainer();
-    const presetBucket = await resolvePresetBucket(appUser.id, result.data.bucket);
+    const userBucket = await assertUserBucket(appUser.id, result.data.userBucketId);
     const categories = await listCategoriesUseCase.execute(appUser.id);
     const category = categories.find((entry) => entry.id === result.data.categoryId);
     if (!category) {
       return { status: "error", message: "Categoría no encontrada" };
     }
-    if (category.userBucketId !== presetBucket.id) {
+    if (category.userBucketId !== userBucket.id) {
       return { status: "error", message: "La categoría no pertenece al bucket seleccionado" };
     }
     await createRuleUseCase.execute({
@@ -53,7 +53,7 @@ export async function createRuleAction(_prevState: ActionState, formData: FormDa
       pattern: result.data.pattern,
       priority: result.data.priority,
       categoryId: result.data.categoryId,
-      userBucketId: presetBucket.id,
+      userBucketId: userBucket.id,
     });
     revalidatePath("/");
     revalidatePath("/budget");
@@ -70,7 +70,7 @@ export async function updateRuleAction(_prevState: ActionState, formData: FormDa
     pattern: formData.get("pattern"),
     priority: formData.get("priority") ?? undefined,
     categoryId: formData.get("categoryId"),
-    bucket: formData.get("bucket"),
+    userBucketId: formData.get("userBucketId"),
   });
 
   if (!result.success) {
@@ -80,13 +80,13 @@ export async function updateRuleAction(_prevState: ActionState, formData: FormDa
   try {
     const { appUser } = await requireAuth();
     const { updateRuleUseCase, listCategoriesUseCase } = serverContainer();
-    const presetBucket = await resolvePresetBucket(appUser.id, result.data.bucket);
+    const userBucket = await assertUserBucket(appUser.id, result.data.userBucketId);
     const categories = await listCategoriesUseCase.execute(appUser.id);
     const category = categories.find((entry) => entry.id === result.data.categoryId);
     if (!category) {
       return { status: "error", message: "Categoría no encontrada" };
     }
-    if (category.userBucketId !== presetBucket.id) {
+    if (category.userBucketId !== userBucket.id) {
       return { status: "error", message: "La categoría no pertenece al bucket seleccionado" };
     }
     await updateRuleUseCase.execute({
@@ -95,7 +95,7 @@ export async function updateRuleAction(_prevState: ActionState, formData: FormDa
       pattern: result.data.pattern,
       priority: result.data.priority,
       categoryId: result.data.categoryId,
-      userBucketId: presetBucket.id,
+      userBucketId: userBucket.id,
     });
     revalidatePath("/");
     revalidatePath("/budget");

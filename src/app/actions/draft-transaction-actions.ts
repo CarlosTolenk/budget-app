@@ -5,7 +5,7 @@ import { z } from "zod";
 import { serverContainer } from "@/infrastructure/config/server-container";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { toAppUtc } from "@/lib/dates/timezone";
-import { resolvePresetBucket } from "@/lib/buckets/assert-user-bucket";
+import { assertUserBucket } from "@/lib/buckets/assert-user-bucket";
 import { ActionState } from "./action-state";
 
 const approveSchema = z.object({
@@ -13,7 +13,7 @@ const approveSchema = z.object({
   amount: z.coerce.number().optional(),
   currency: z.string().min(3).optional(),
   merchant: z.string().optional(),
-  bucket: z.enum(["NEEDS", "WANTS", "SAVINGS"]).optional(),
+  userBucketId: z.string().cuid().optional(),
   categoryId: z.string().optional(),
   date: z.coerce.date().optional(),
 });
@@ -28,7 +28,7 @@ export async function approveDraftAction(_prev: ActionState, formData: FormData)
     amount: formData.get("amount") ?? undefined,
     currency: formData.get("currency") ?? undefined,
     merchant: formData.get("merchant") ?? undefined,
-    bucket: formData.get("bucket") ?? undefined,
+    userBucketId: formData.get("userBucketId") ?? undefined,
     categoryId: formData.get("categoryId") ?? undefined,
     date: formData.get("date") ?? undefined,
   });
@@ -41,10 +41,9 @@ export async function approveDraftAction(_prev: ActionState, formData: FormData)
     const { approveTransactionDraftUseCase } = serverContainer();
     const { id, ...rest } = result.data;
     const overrides: ApproveOverrides = { ...rest };
-    if (overrides.bucket) {
-      const presetBucket = await resolvePresetBucket(appUser.id, overrides.bucket);
-      overrides.userBucketId = presetBucket.id;
-      delete overrides.bucket;
+    if (overrides.userBucketId) {
+      const userBucket = await assertUserBucket(appUser.id, overrides.userBucketId);
+      overrides.userBucketId = userBucket.id;
     }
     if (overrides.date) {
       overrides.date = toAppUtc(overrides.date);

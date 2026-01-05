@@ -5,7 +5,7 @@ import { z } from "zod";
 import { serverContainer } from "@/infrastructure/config/server-container";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { toAppUtc } from "@/lib/dates/timezone";
-import { resolvePresetBucket } from "@/lib/buckets/assert-user-bucket";
+import { assertUserBucket } from "@/lib/buckets/assert-user-bucket";
 import { ActionState } from "./action-state";
 
 const schema = z.object({
@@ -13,7 +13,7 @@ const schema = z.object({
   amount: z.coerce.number(),
   currency: z.string().min(3),
   merchant: z.string().optional(),
-  bucket: z.enum(["NEEDS", "WANTS", "SAVINGS"]),
+  userBucketId: z.string().cuid(),
   categoryId: z.string().min(1),
 });
 
@@ -23,7 +23,7 @@ export async function createTransactionAction(_prevState: ActionState, formData:
     amount: formData.get("amount"),
     currency: formData.get("currency") ?? "DOP",
     merchant: formData.get("merchant") ?? undefined,
-    bucket: formData.get("bucket"),
+    userBucketId: formData.get("userBucketId"),
     categoryId: formData.get("categoryId") || undefined,
   });
 
@@ -33,14 +33,14 @@ export async function createTransactionAction(_prevState: ActionState, formData:
 
   try {
     const { appUser } = await requireAuth();
-    const presetBucket = await resolvePresetBucket(appUser.id, result.data.bucket);
+    const bucket = await assertUserBucket(appUser.id, result.data.userBucketId);
     const { createTransactionUseCase, listCategoriesUseCase } = serverContainer();
     const categories = await listCategoriesUseCase.execute(appUser.id);
     const category = categories.find((cat) => cat.id === result.data.categoryId);
     if (!category) {
       return { status: "error", message: "La categoría seleccionada no existe" };
     }
-    if (category.userBucketId !== presetBucket.id) {
+    if (category.userBucketId !== bucket.id) {
       return { status: "error", message: "La categoría no pertenece al bucket seleccionado" };
     }
 
@@ -52,7 +52,7 @@ export async function createTransactionAction(_prevState: ActionState, formData:
       amount: normalizedAmount,
       currency: result.data.currency,
       merchant: result.data.merchant,
-      userBucketId: presetBucket.id,
+      userBucketId: bucket.id,
       categoryId: result.data.categoryId,
     });
     revalidatePath("/");

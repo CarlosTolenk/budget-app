@@ -28,6 +28,39 @@ export class PrismaUserBucketRepository implements UserBucketRepository {
     return record ? this.map(record) : null;
   }
 
+  async createCustom(userId: string, name: string): Promise<UserBucket> {
+    const { _max } = await prisma.userBucket.aggregate({
+      where: { userId },
+      _max: { sortOrder: true },
+    });
+    const sortOrder = (_max.sortOrder ?? -1) + 1;
+    const record = await prisma.userBucket.create({
+      data: {
+        userId,
+        name,
+        sortOrder,
+        color: null,
+        mode: "CUSTOM",
+        presetKey: null,
+      },
+    });
+    return this.map(record);
+  }
+
+  async rename(userId: string, bucketId: string, name: string): Promise<UserBucket> {
+    const existing = await prisma.userBucket.findFirst({
+      where: { id: bucketId, userId },
+    });
+    if (!existing) {
+      throw new Error("Bucket no encontrado");
+    }
+    const record = await prisma.userBucket.update({
+      where: { id: existing.id },
+      data: { name },
+    });
+    return this.map(record);
+  }
+
   private map(record: {
     id: string;
     userId: string;

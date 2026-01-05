@@ -5,7 +5,7 @@ import { z } from "zod";
 import { serverContainer } from "@/infrastructure/config/server-container";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { toAppUtc } from "@/lib/dates/timezone";
-import { resolvePresetBucket } from "@/lib/buckets/assert-user-bucket";
+import { assertUserBucket } from "@/lib/buckets/assert-user-bucket";
 import { ActionState } from "./action-state";
 
 const schema = z.object({
@@ -15,7 +15,7 @@ const schema = z.object({
   merchant: z.string().optional(),
   currency: z.string().min(3).optional(),
   categoryId: z.string().min(1).optional(),
-  bucket: z.enum(["NEEDS", "WANTS", "SAVINGS"]).optional(),
+  userBucketId: z.string().cuid().optional(),
 });
 
 export async function updateTransactionAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -26,7 +26,7 @@ export async function updateTransactionAction(_prev: ActionState, formData: Form
     merchant: formData.get("merchant") ?? undefined,
     currency: formData.get("currency") ?? undefined,
     categoryId: formData.get("categoryId") ?? undefined,
-    bucket: formData.get("bucket") ?? undefined,
+    userBucketId: formData.get("userBucketId") ?? undefined,
   });
 
   if (!result.success) {
@@ -37,7 +37,7 @@ export async function updateTransactionAction(_prev: ActionState, formData: Form
     const { appUser } = await requireAuth();
     const { updateTransactionUseCase, listCategoriesUseCase } = serverContainer();
     const { id, ...data } = result.data;
-    const presetBucket = data.bucket ? await resolvePresetBucket(appUser.id, data.bucket) : undefined;
+    const userBucket = data.userBucketId ? await assertUserBucket(appUser.id, data.userBucketId) : undefined;
 
     if (data.categoryId) {
       const categories = await listCategoriesUseCase.execute(appUser.id);
@@ -45,13 +45,15 @@ export async function updateTransactionAction(_prev: ActionState, formData: Form
       if (!category) {
         return { status: "error", message: "Categoría no encontrada" };
       }
-      const bucketId = presetBucket?.id ?? category.userBucketId;
+      const bucketId = userBucket?.id ?? category.userBucketId;
       if (category.userBucketId !== bucketId) {
         return { status: "error", message: "La categoría no coincide con el bucket seleccionado" };
       }
     }
 
-    const { amount, bucket, date, ...rest } = data;
+    const { userBucketId: _removedBucket, ...dataWithoutBucket } = data;
+    void _removedBucket;
+    const { amount, date, ...rest } = dataWithoutBucket;
     const normalizedAmount =
       amount !== undefined ? (amount < 0 ? amount : -Math.abs(amount)) : undefined;
 
@@ -60,7 +62,7 @@ export async function updateTransactionAction(_prev: ActionState, formData: Form
       id,
       ...(date ? { date: toAppUtc(date) } : {}),
       ...rest,
-      ...(presetBucket ? { userBucketId: presetBucket.id } : {}),
+      ...(userBucket ? { userBucketId: userBucket.id } : {}),
       ...(normalizedAmount !== undefined ? { amount: normalizedAmount } : {}),
     });
     revalidatePath("/");

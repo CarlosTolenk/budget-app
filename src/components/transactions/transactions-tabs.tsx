@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState, useMemo, useState, useTransition } from "react";
+import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import clsx from "clsx";
 import { Category } from "@/domain/categories/category";
 import { Transaction, TransactionSource } from "@/domain/transactions/transaction";
 import { ScheduledTransaction } from "@/domain/scheduled-transactions/scheduled-transaction";
 import { TransactionDraft } from "@/domain/transaction-drafts/transaction-draft";
+import { UserBucket } from "@/domain/user-buckets/user-bucket";
 import { formatCurrency } from "@/lib/format";
 import { formatAppDateInput, formatInAppTimezone, getAppDateRange } from "@/lib/dates/timezone";
 import { TransactionForm } from "@/components/forms/transaction-form";
@@ -17,8 +18,6 @@ import { initialActionState } from "@/app/actions/action-state";
 import { importEmailsAction } from "@/app/actions/import-email-actions";
 import { disconnectGmailAction } from "@/app/actions/gmail-credential-actions";
 import { useRouter } from "next/navigation";
-import { bucketOptions, type BucketValue } from "@/components/forms/bucket-options";
-import { bucketCopy } from "@/domain/value-objects/bucket";
 
 const sourceDisplay: Record<TransactionSource, { label: string; badgeClass: string }> = {
   MANUAL: { label: "Manual", badgeClass: "bg-slate-100/10 text-slate-100" },
@@ -33,6 +32,7 @@ interface TransactionsTabsProps {
   categories: Category[];
   gmailConnectUrl: string;
   isGmailConnected: boolean;
+  userBuckets: UserBucket[];
 }
 
 const tabs = [
@@ -50,6 +50,7 @@ export function TransactionsTabs({
   categories,
   gmailConnectUrl,
   isGmailConnected,
+  userBuckets,
 }: TransactionsTabsProps) {
   const [active, setActive] = useState<TabId>("manual");
 
@@ -71,24 +72,33 @@ export function TransactionsTabs({
         ))}
       </div>
 
-      {active === "manual" && <ManualPanel manual={manual} categories={categories} />}
-      {active === "scheduled" && <ScheduledPanel scheduled={scheduled} categories={categories} />}
+      {active === "manual" && <ManualPanel manual={manual} categories={categories} userBuckets={userBuckets} />}
+      {active === "scheduled" && <ScheduledPanel scheduled={scheduled} categories={categories} userBuckets={userBuckets} />}
       {active === "drafts" && (
         <DraftsPanel
           drafts={drafts}
           categories={categories}
           gmailConnectUrl={gmailConnectUrl}
           isGmailConnected={isGmailConnected}
+          userBuckets={userBuckets}
         />
       )}
     </div>
   );
 }
 
-function ManualPanel({ manual, categories }: { manual: Transaction[]; categories: Category[] }) {
+function ManualPanel({
+  manual,
+  categories,
+  userBuckets,
+}: {
+  manual: Transaction[];
+  categories: Category[];
+  userBuckets: UserBucket[];
+}) {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<"all" | string>("all");
-  const [bucketFilter, setBucketFilter] = useState<"all" | BucketValue>("all");
+  const [bucketFilter, setBucketFilter] = useState<"all" | string>("all");
   const [startDate, setStartDate] = useState(() => {
     const today = formatAppDateInput(new Date());
     return `${today.slice(0, 7)}-01`;
@@ -107,6 +117,10 @@ function ManualPanel({ manual, categories }: { manual: Transaction[]; categories
     }, {});
   }, [categories]);
 
+  const orderedBuckets = useMemo(
+    () => [...userBuckets].sort((a, b) => a.sortOrder - b.sortOrder),
+    [userBuckets],
+  );
   const filteredTransactions = useMemo(() => {
     const normalizedTerm = searchTerm.trim().toLowerCase();
     const min = minAmount ? Number(minAmount) : undefined;
@@ -121,7 +135,7 @@ function ManualPanel({ manual, categories }: { manual: Transaction[]; categories
         if (categoryFilter !== "all" && transaction.categoryId !== categoryFilter) {
           return false;
         }
-        if (bucketFilter !== "all" && transaction.bucket !== bucketFilter) {
+        if (bucketFilter !== "all" && transaction.userBucketId !== bucketFilter) {
           return false;
         }
         if (normalizedTerm) {
@@ -160,7 +174,7 @@ function ManualPanel({ manual, categories }: { manual: Transaction[]; categories
 
   return (
     <div className="space-y-6">
-      <TransactionForm categories={categories} />
+      <TransactionForm categories={categories} userBuckets={userBuckets} />
       <article className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -215,15 +229,16 @@ function ManualPanel({ manual, categories }: { manual: Transaction[]; categories
               value={bucketFilter}
               onChange={(event) => {
                 const value = event.target.value;
-                setBucketFilter(value === "all" ? "all" : (value as BucketValue));
+                setBucketFilter(value);
                 setPage(1);
               }}
               className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white focus:border-white/40 focus:outline-none"
+              disabled={!orderedBuckets.length}
             >
               <option value="all">Todos</option>
-              {bucketOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
+              {orderedBuckets.map((bucket) => (
+                <option key={bucket.id} value={bucket.id}>
+                  {bucket.name}
                 </option>
               ))}
             </select>
@@ -305,7 +320,7 @@ function ManualPanel({ manual, categories }: { manual: Transaction[]; categories
                   "inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
                   sourceInfo.badgeClass,
                 );
-                const bucketLabel = transaction.bucket ? bucketCopy[transaction.bucket]?.label ?? transaction.bucket : "Sin renglón";
+                const bucketLabel = transaction.userBucket?.name ?? "Sin renglón";
                 return (
                   <tr key={transaction.id} className="border-t border-white/5 text-sm last:border-b last:border-white/5">
                     <td className="py-3 pr-4 align-top">
@@ -340,7 +355,7 @@ function ManualPanel({ manual, categories }: { manual: Transaction[]; categories
                       {formatCurrency(transaction.amount, transaction.currency)}
                     </td>
                     <td className="py-3 text-right align-top">
-                      <TransactionActions transaction={transaction} categories={categories} />
+                      <TransactionActions transaction={transaction} categories={categories} userBuckets={userBuckets} />
                     </td>
                   </tr>
                 );
@@ -394,12 +409,20 @@ function ManualPanel({ manual, categories }: { manual: Transaction[]; categories
   );
 }
 
-function ScheduledPanel({ scheduled, categories }: { scheduled: ScheduledTransaction[]; categories: Category[] }) {
+function ScheduledPanel({
+  scheduled,
+  categories,
+  userBuckets,
+}: {
+  scheduled: ScheduledTransaction[];
+  categories: Category[];
+  userBuckets: UserBucket[];
+}) {
   const [deleteState, deleteAction] = useActionState(deleteScheduledTransactionAction, initialActionState);
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <ScheduledTransactionForm categories={categories} />
+      <ScheduledTransactionForm categories={categories} userBuckets={userBuckets} />
       <article className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
         <h2 className="text-xl font-semibold">Planes programados</h2>
         <div className="mt-4 space-y-3">
@@ -409,7 +432,7 @@ function ScheduledPanel({ scheduled, categories }: { scheduled: ScheduledTransac
               <p className="text-xs text-slate-400">
                 Próxima ejecución:{" "}
                 {formatInAppTimezone(plan.nextRunDate, { day: "2-digit", month: "short", year: "numeric" }).replace(".", "")} ·{" "}
-                {plan.recurrence}
+                {plan.recurrence} · {plan.userBucket?.name ?? "Sin renglón"}
               </p>
               <p className="text-sm text-slate-200">{formatCurrency(plan.amount, plan.currency)}</p>
               <form action={deleteAction} className="mt-2 text-right">
@@ -435,11 +458,13 @@ function DraftsPanel({
   categories,
   gmailConnectUrl,
   isGmailConnected,
+  userBuckets,
 }: {
   drafts: TransactionDraft[];
   categories: Category[];
   gmailConnectUrl: string;
   isGmailConnected: boolean;
+  userBuckets: UserBucket[];
 }) {
   const router = useRouter();
   const [importState, setImportState] = useState<{
@@ -589,7 +614,7 @@ function DraftsPanel({
         </div>
       ) : null}
       {drafts.map((draft) => (
-        <DraftCard key={draft.id} draft={draft} categories={categories} />
+        <DraftCard key={draft.id} draft={draft} categories={categories} userBuckets={userBuckets} />
       ))}
       {!drafts.length && <p className="text-sm text-slate-400">No hay borradores pendientes.</p>}
     </div>
@@ -598,18 +623,35 @@ function DraftsPanel({
 
 type ContactLike = { name?: string; email?: string };
 
-function DraftCard({ draft, categories }: { draft: TransactionDraft; categories: Category[] }) {
+function DraftCard({
+  draft,
+  categories,
+  userBuckets,
+}: {
+  draft: TransactionDraft;
+  categories: Category[];
+  userBuckets: UserBucket[];
+}) {
   const [approveState, approveAction] = useActionState(approveDraftAction, initialActionState);
   const [deleteState, deleteAction] = useActionState(deleteDraftAction, initialActionState);
-  const [bucket, setBucket] = useState<BucketValue>(draft.bucket ?? "NEEDS");
+  const orderedBuckets = useMemo(
+    () => [...userBuckets].sort((a, b) => a.sortOrder - b.sortOrder),
+    [userBuckets],
+  );
+  const [bucketId, setBucketId] = useState(draft.userBucketId ?? orderedBuckets[0]?.id ?? "");
   const [categoryId, setCategoryId] = useState(draft.categoryId ?? "");
   const [isEditing, setIsEditing] = useState(false);
+  useEffect(() => {
+    if (!bucketId && orderedBuckets.length) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setBucketId(orderedBuckets[0].id);
+    }
+  }, [orderedBuckets, bucketId]);
 
   const bucketCategories = useMemo(
-    () => categories.filter((category) => category.bucket === bucket),
-    [categories, bucket],
+    () => categories.filter((category) => category.userBucketId === bucketId),
+    [categories, bucketId],
   );
-
   const resolvedCategoryId = useMemo(() => {
     if (!bucketCategories.length) {
       return "";
@@ -620,7 +662,8 @@ function DraftCard({ draft, categories }: { draft: TransactionDraft; categories:
     return bucketCategories[0]?.id ?? "";
   }, [bucketCategories, categoryId]);
 
-  const canApprove = bucketCategories.length > 0 && Boolean(resolvedCategoryId);
+  const hasBuckets = orderedBuckets.length > 0;
+  const canApprove = hasBuckets && bucketCategories.length > 0 && Boolean(resolvedCategoryId) && Boolean(bucketId);
   const rawPayload = (draft.rawPayload ?? {}) as Record<string, unknown>;
   const forwardedByValue = (rawPayload as { forwardedBy?: unknown }).forwardedBy;
   const recipientsValue = (rawPayload as { recipients?: unknown }).recipients;
@@ -635,7 +678,7 @@ function DraftCard({ draft, categories }: { draft: TransactionDraft; categories:
   const adapterLabel = formatAdapterLabel(adapterValue, draft.source);
   const messageSubject = typeof subjectValue === "string" ? subjectValue : undefined;
   const messageSnippet = typeof snippetValue === "string" ? snippetValue : undefined;
-  const bucketLabel = draft.bucket ? bucketCopy[draft.bucket]?.label ?? draft.bucket : "Sin renglón";
+  const bucketLabel = draft.userBucket?.name ?? "Sin renglón";
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm">
@@ -718,14 +761,18 @@ function DraftCard({ draft, categories }: { draft: TransactionDraft; categories:
             <label className="flex flex-col gap-1 text-[11px] uppercase tracking-wide text-slate-400">
               Renglón
               <select
-                name="bucket"
-                value={bucket}
-                onChange={(event) => setBucket(event.target.value as BucketValue)}
+                name="userBucketId"
+                value={bucketId}
+                onChange={(event) => {
+                  setBucketId(event.target.value);
+                  setCategoryId("");
+                }}
                 className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
+                disabled={!hasBuckets}
               >
-                {bucketOptions.map((option) => (
-                  <option key={option.value} value={option.value} className="text-slate-900">
-                    {option.label}
+                {orderedBuckets.map((bucket) => (
+                  <option key={bucket.id} value={bucket.id} className="text-slate-900">
+                    {bucket.name}
                   </option>
                 ))}
               </select>
@@ -759,7 +806,9 @@ function DraftCard({ draft, categories }: { draft: TransactionDraft; categories:
               <input name="currency" defaultValue={draft.currency} className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white" />
             </label>
             <div className="md:col-span-2 space-y-2">
-              {!bucketCategories.length ? (
+              {!hasBuckets ? (
+                <p className="text-xs text-rose-300">No tienes renglones configurados.</p>
+              ) : !bucketCategories.length ? (
                 <p className="text-xs text-rose-300">
                   Este renglón no tiene categorías. Asegúrate de definirlas en Presupuesto antes de aprobar este gasto.
                 </p>

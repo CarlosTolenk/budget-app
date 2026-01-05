@@ -1,4 +1,4 @@
-import { Prisma, ScheduledTransaction as PrismaScheduled, UserBucket } from "@prisma/client";
+import { ScheduledTransaction as PrismaScheduled, UserBucket } from "@prisma/client";
 import { ScheduledTransaction, ScheduledRecurrence, CreateScheduledTransactionInput } from "@/domain/scheduled-transactions/scheduled-transaction";
 import { ScheduledTransactionRepository } from "@/domain/repositories";
 import { prisma } from "@/infrastructure/db/prisma-client";

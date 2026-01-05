@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { serverContainer } from "@/infrastructure/config/server-container";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { resolvePresetBucket } from "@/lib/buckets/assert-user-bucket";
+import { assertUserBucket } from "@/lib/buckets/assert-user-bucket";
 import { ActionState } from "./action-state";
 
 const amountSchema = z.preprocess(
@@ -22,14 +22,14 @@ const amountSchema = z.preprocess(
 
 const schema = z.object({
   name: z.string().min(2),
-  bucket: z.enum(["NEEDS", "WANTS", "SAVINGS"]),
+  userBucketId: z.string().min(3),
   idealMonthlyAmount: amountSchema,
 });
 
 export async function createCategoryAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
   const result = schema.safeParse({
     name: formData.get("name"),
-    bucket: formData.get("bucket"),
+    userBucketId: formData.get("userBucketId"),
     idealMonthlyAmount: formData.get("idealMonthlyAmount"),
   });
   if (!result.success) {
@@ -38,12 +38,12 @@ export async function createCategoryAction(_prevState: ActionState, formData: Fo
 
   try {
     const { appUser } = await requireAuth();
-    const presetBucket = await resolvePresetBucket(appUser.id, result.data.bucket);
+    const userBucket = await assertUserBucket(appUser.id, result.data.userBucketId);
     const { createCategoryUseCase } = serverContainer();
     await createCategoryUseCase.execute({
       userId: appUser.id,
       name: result.data.name,
-      userBucketId: presetBucket.id,
+      userBucketId: userBucket.id,
       idealMonthlyAmount: result.data.idealMonthlyAmount,
     });
     revalidatePath("/");
@@ -59,7 +59,7 @@ export async function createCategoryAction(_prevState: ActionState, formData: Fo
 const updateSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(2),
-  bucket: z.enum(["NEEDS", "WANTS", "SAVINGS"]),
+  userBucketId: z.string().min(3),
   idealMonthlyAmount: amountSchema,
 });
 
@@ -67,7 +67,7 @@ export async function updateCategoryAction(_prevState: ActionState, formData: Fo
   const result = updateSchema.safeParse({
     id: formData.get("id"),
     name: formData.get("name"),
-    bucket: formData.get("bucket"),
+    userBucketId: formData.get("userBucketId"),
     idealMonthlyAmount: formData.get("idealMonthlyAmount"),
   });
 
@@ -77,13 +77,13 @@ export async function updateCategoryAction(_prevState: ActionState, formData: Fo
 
   try {
     const { appUser } = await requireAuth();
-    const presetBucket = await resolvePresetBucket(appUser.id, result.data.bucket);
+    const userBucket = await assertUserBucket(appUser.id, result.data.userBucketId);
     const { updateCategoryUseCase } = serverContainer();
     await updateCategoryUseCase.execute({
       userId: appUser.id,
       id: result.data.id,
       name: result.data.name,
-      userBucketId: presetBucket.id,
+      userBucketId: userBucket.id,
       idealMonthlyAmount: result.data.idealMonthlyAmount,
     });
     revalidatePath("/");

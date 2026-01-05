@@ -8,15 +8,16 @@ import { deleteTransactionAction } from "@/app/actions/delete-transaction-action
 import { updateTransactionAction } from "@/app/actions/update-transaction-action";
 import { initialActionState, type ActionState } from "@/app/actions/action-state";
 import { ModalConfirmButton } from "@/components/ui/modal-confirm-button";
-import { bucketOptions, type BucketValue } from "@/components/forms/bucket-options";
-import { formatAppDateInput, formatInAppTimezone } from "@/lib/dates/timezone";
+import { formatAppDateInput } from "@/lib/dates/timezone";
+import { UserBucket } from "@/domain/user-buckets/user-bucket";
 
 interface TransactionActionsProps {
   transaction: Transaction;
   categories: Category[];
+  userBuckets: UserBucket[];
 }
 
-export function TransactionActions({ transaction, categories }: TransactionActionsProps) {
+export function TransactionActions({ transaction, categories, userBuckets }: TransactionActionsProps) {
   const [isEditing, setIsEditing] = useState(false);
   const enhancedUpdateAction = async (prev: ActionState, formData: FormData) => {
     const result = await updateTransactionAction(prev, formData);
@@ -27,14 +28,19 @@ export function TransactionActions({ transaction, categories }: TransactionActio
   };
   const [formState, formAction] = useActionState(enhancedUpdateAction, initialActionState);
   const [deleteState, deleteAction] = useActionState(deleteTransactionAction, initialActionState);
-  const [bucket, setBucket] = useState<BucketValue>(transaction.bucket ?? "NEEDS");
+  const [bucketId, setBucketId] = useState(transaction.userBucketId);
   const [categoryId, setCategoryId] = useState(transaction.categoryId ?? "");
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
 
-  const filteredCategories = useMemo(
-    () => categories.filter((category) => category.bucket === bucket),
-    [categories, bucket],
+  const orderedBuckets = useMemo(
+    () => [...userBuckets].sort((a, b) => a.sortOrder - b.sortOrder),
+    [userBuckets],
   );
+  const filteredCategories = useMemo(
+    () => categories.filter((category) => category.userBucketId === bucketId),
+    [categories, bucketId],
+  );
+  const hasBuckets = orderedBuckets.length > 0;
 
   const resolvedCategoryId = useMemo(() => {
     if (!filteredCategories.length) {
@@ -107,14 +113,18 @@ export function TransactionActions({ transaction, categories }: TransactionActio
           <label className="flex flex-col gap-1 text-[11px] uppercase tracking-wide text-slate-400">
             Renglón
             <select
-              name="bucket"
-              value={bucket}
-              onChange={(event) => setBucket(event.target.value as BucketValue)}
+              name="userBucketId"
+              value={bucketId}
+              onChange={(event) => {
+                setBucketId(event.target.value);
+                setCategoryId("");
+              }}
               className="rounded-lg border border-white/10 bg-white/10 px-3 py-1 text-white"
+              disabled={!hasBuckets}
             >
-              {bucketOptions.map((option) => (
-                <option key={option.value} value={option.value} className="text-slate-900">
-                  {option.label}
+              {orderedBuckets.map((bucket) => (
+                <option key={bucket.id} value={bucket.id} className="text-slate-900">
+                  {bucket.name}
                 </option>
               ))}
             </select>
@@ -139,7 +149,9 @@ export function TransactionActions({ transaction, categories }: TransactionActio
               ))}
             </select>
           </label>
-          {!filteredCategories.length ? (
+          {!hasBuckets ? (
+            <p className="text-[11px] text-rose-300">No tienes renglones configurados.</p>
+          ) : !filteredCategories.length ? (
             <p className="text-[11px] text-rose-300">Este renglón no tiene categorías disponibles.</p>
           ) : null}
           <button

@@ -1,12 +1,24 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useMemo } from "react";
 import { createCategoryAction } from "@/app/actions/category-actions";
 import { initialActionState } from "@/app/actions/action-state";
-import { bucketOptions } from "@/components/forms/bucket-options";
+import { UserBucket } from "@/domain/user-buckets/user-bucket";
+import { BucketMode } from "@/domain/users/user";
 
-export function CategoryForm() {
+interface CategoryFormProps {
+  userBuckets: UserBucket[];
+  bucketMode: BucketMode;
+}
+
+export function CategoryForm({ userBuckets, bucketMode }: CategoryFormProps) {
   const [state, formAction] = useActionState(createCategoryAction, initialActionState);
+  const availableBuckets = useMemo(
+    () => userBuckets.filter((bucket) => bucket.mode === bucketMode),
+    [userBuckets, bucketMode],
+  );
+  const selectBuckets = availableBuckets.length ? availableBuckets : userBuckets;
+  const defaultBucketId = selectBuckets[0]?.id ?? "";
 
   return (
     <form action={formAction} className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm">
@@ -23,16 +35,18 @@ export function CategoryForm() {
       <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-slate-400">
         Renglón
         <select
-          name="bucket"
+          name="userBucketId"
           className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
-          defaultValue="NEEDS"
+          defaultValue={defaultBucketId}
+          disabled={!selectBuckets.length}
         >
-          {bucketOptions.map((bucket) => (
-            <option key={bucket.value} value={bucket.value} className="text-slate-900">
-              {bucket.label}
+          {selectBuckets.map((bucket) => (
+            <option key={bucket.id} value={bucket.id} className="text-slate-900">
+              {bucket.name}
             </option>
           ))}
         </select>
+        {!selectBuckets.length ? <span className="text-[10px] text-rose-300">Crea un bucket para asignar categorías.</span> : null}
       </label>
       <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-slate-400">
         Monto ideal mensual

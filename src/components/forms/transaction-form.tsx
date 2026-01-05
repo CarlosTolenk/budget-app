@@ -1,25 +1,37 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { createTransactionAction } from "@/app/actions/transaction-actions";
 import { initialActionState } from "@/app/actions/action-state";
 import { Category } from "@/domain/categories/category";
-import { bucketOptions, pickDefaultBucket, type BucketValue } from "@/components/forms/bucket-options";
+import { UserBucket } from "@/domain/user-buckets/user-bucket";
 import { formatAppDateInput } from "@/lib/dates/timezone";
+import { pickDefaultUserBucketId } from "@/lib/buckets/user-bucket-helpers";
 
 interface TransactionFormProps {
   categories: Category[];
+  userBuckets: UserBucket[];
 }
 
-export function TransactionForm({ categories }: TransactionFormProps) {
+export function TransactionForm({ categories, userBuckets }: TransactionFormProps) {
   const [state, formAction] = useActionState(createTransactionAction, initialActionState);
   const today = formatAppDateInput(new Date());
-  const [bucket, setBucket] = useState<BucketValue>(() => pickDefaultBucket(categories));
+  const orderedBuckets = useMemo(
+    () => [...userBuckets].sort((a, b) => a.sortOrder - b.sortOrder),
+    [userBuckets],
+  );
+  const [bucketId, setBucketId] = useState(() => pickDefaultUserBucketId(orderedBuckets, categories));
   const [categoryId, setCategoryId] = useState("");
+  useEffect(() => {
+    if (!bucketId && orderedBuckets.length) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setBucketId(pickDefaultUserBucketId(orderedBuckets, categories));
+    }
+  }, [orderedBuckets, categories, bucketId]);
 
   const bucketCategories = useMemo(
-    () => categories.filter((category) => category.bucket === bucket),
-    [categories, bucket],
+    () => categories.filter((category) => category.userBucketId === bucketId),
+    [categories, bucketId],
   );
 
   const resolvedCategoryId = useMemo(() => {
@@ -32,7 +44,8 @@ export function TransactionForm({ categories }: TransactionFormProps) {
     return bucketCategories[0]?.id ?? "";
   }, [bucketCategories, categoryId]);
 
-  const canSubmit = bucketCategories.length > 0 && Boolean(resolvedCategoryId);
+  const canSubmit = bucketCategories.length > 0 && Boolean(resolvedCategoryId) && Boolean(bucketId);
+  const hasBuckets = orderedBuckets.length > 0;
 
   return (
     <form action={formAction} className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm">
@@ -83,14 +96,18 @@ export function TransactionForm({ categories }: TransactionFormProps) {
         <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-slate-400">
           Renglón
           <select
-            name="bucket"
+            name="userBucketId"
             className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
-            value={bucket}
-            onChange={(event) => setBucket(event.target.value as BucketValue)}
+            value={bucketId}
+            onChange={(event) => {
+              setBucketId(event.target.value);
+              setCategoryId("");
+            }}
+            disabled={!hasBuckets}
           >
-            {bucketOptions.map((option) => (
-              <option key={option.value} value={option.value} className="text-slate-900">
-                {option.label}
+            {orderedBuckets.map((bucket) => (
+              <option key={bucket.id} value={bucket.id} className="text-slate-900">
+                {bucket.name}
               </option>
             ))}
           </select>
@@ -116,7 +133,11 @@ export function TransactionForm({ categories }: TransactionFormProps) {
           </select>
         </label>
       </div>
-      {!bucketCategories.length ? (
+      {!hasBuckets ? (
+        <p className="text-xs text-rose-300">
+          No tienes renglones configurados. Ajusta tu presupuesto antes de registrar transacciones.
+        </p>
+      ) : !bucketCategories.length ? (
         <p className="text-xs text-rose-300">
           Este renglón no tiene categorías asignadas. Crea una en la pantalla de Presupuesto antes de registrar gastos aquí.
         </p>

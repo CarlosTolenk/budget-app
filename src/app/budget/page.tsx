@@ -1,14 +1,15 @@
 import { format } from "date-fns";
-import { bucketCopy } from "@/domain/value-objects/bucket";
 import { serverContainer } from "@/infrastructure/config/server-container";
 import { CategoryForm } from "@/components/forms/category-form";
 import { RuleForm } from "@/components/forms/rule-form";
 import { IncomeForm } from "@/components/forms/income-form";
-import { formatCurrency, formatMonthLabel, formatPercent } from "@/lib/format";
+import { formatCurrency, formatMonthLabel } from "@/lib/format";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { IncomeList } from "@/components/budget/income-list";
 import { CategoryManager } from "@/components/budget/category-manager";
 import { RuleManager } from "@/components/budget/rule-manager";
+import { BucketModeSelector } from "@/components/budget/bucket-mode-selector";
+import { UserBucketsGrid } from "@/components/budget/user-buckets-grid";
 
 type BudgetPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -30,24 +31,27 @@ export default async function BudgetPage({ searchParams }: BudgetPageProps) {
   const incomeMonthParam = typeof resolvedSearch?.incomeMonth === "string" ? resolvedSearch.incomeMonth : undefined;
   const incomeMonth = resolveIncomeMonth(incomeMonthParam);
   const container = serverContainer();
-  const [summary, categories, incomes, rules] = await Promise.all([
+  const [summary, categories, incomes, rules, userBuckets] = await Promise.all([
     container.getDashboardSummaryUseCase.execute({ userId, monthId: incomeMonth }),
     container.listCategoriesUseCase.execute(userId),
     container.listIncomesUseCase.execute(userId, incomeMonth),
     container.listRulesUseCase.execute(userId),
+    container.userBucketRepository.listByUserId(userId),
   ]);
 
-  const byBucket = categories.reduce<Record<string, typeof categories>>((acc, category) => {
-    if (!category.bucket) {
-      return acc;
-    }
-    acc[category.bucket] = acc[category.bucket] ? [...acc[category.bucket], category] : [category];
+  const categoriesByBucketId = categories.reduce<Record<string, typeof categories>>((acc, category) => {
+    const key = category.userBucketId;
+    acc[key] = acc[key] ? [...acc[key], category] : [category];
     return acc;
   }, {});
   const bucketSummaryMap = summary.buckets.reduce<Record<string, (typeof summary.buckets)[number]>>((acc, bucket) => {
-    acc[bucket.bucket] = bucket;
+    acc[bucket.bucketId] = bucket;
     return acc;
   }, {});
+  const activeBuckets = userBuckets.filter((bucket) => bucket.mode === appUser.bucketMode);
+  const customBuckets = userBuckets.filter((bucket) => bucket.mode === "CUSTOM");
+  const remainingSlots = Math.max(0, 4 - customBuckets.length);
+  const canAddMoreBuckets = appUser.bucketMode === "CUSTOM" && remainingSlots > 0;
 
   const totalIncome = incomes.reduce((sum, income) => sum + income.amount, 0);
 
@@ -58,6 +62,17 @@ export default async function BudgetPage({ searchParams }: BudgetPageProps) {
         <h1 className="text-3xl font-semibold">Ingresos y categorías</h1>
         <p className="text-base text-slate-300">Registra ingresos y deja que el sistema calcule 50/30/20 automáticamente.</p>
       </header>
+
+      <BucketModeSelector currentMode={appUser.bucketMode} />
+
+      <UserBucketsGrid
+        bucketMode={appUser.bucketMode}
+        buckets={activeBuckets}
+        categoriesByBucketId={categoriesByBucketId}
+        bucketSummaries={bucketSummaryMap}
+        canAddMore={canAddMoreBuckets}
+        remainingSlots={remainingSlots}
+      />
 
       <section className="grid gap-4 lg:grid-cols-2">
         <IncomeForm month={incomeMonth} />
@@ -91,68 +106,14 @@ export default async function BudgetPage({ searchParams }: BudgetPageProps) {
         </article>
       </section>
 
-      <section className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
-        <h2 className="text-xl font-semibold">Categorías por renglón</h2>
-        <div className="mt-4 grid gap-4 md:grid-cols-3">
-          {(Object.keys(bucketCopy) as Array<keyof typeof bucketCopy>).map((bucket) => {
-            const bucketCategories = byBucket[bucket] ?? [];
-            const copy = bucketCopy[bucket];
-            return (
-              <article key={bucket} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="flex items-center justify-between text-sm text-slate-300">
-                  <span>{copy.label}</span>
-                  <span>{formatPercent(copy.targetRatio)}</span>
-                </div>
-                <p className="text-xs text-slate-400">
-                  Meta sugerida {formatCurrency((bucketSummaryMap[bucket]?.target ?? summary.income * copy.targetRatio) || 0)}
-                </p>
-                <p className="text-xs text-slate-300">
-                  Plan ideal registrado {formatCurrency(bucketSummaryMap[bucket]?.planned ?? 0)}
-                </p>
-                {(() => {
-                  const target = bucketSummaryMap[bucket]?.target ?? summary.income * copy.targetRatio;
-                  const planned = bucketSummaryMap[bucket]?.planned ?? 0;
-                  const delta = target - planned;
-                  const status =
-                    planned === 0
-                      ? "Sin asignar"
-                      : delta >= 0
-                        ? "Dentro de la meta"
-                        : "Sobre la meta";
-                  return (
-                    <p className={`text-xs font-semibold ${delta >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
-                      {status} · {formatCurrency(Math.abs(delta))}
-                    </p>
-                  );
-                })()}
-                <ul className="mt-3 space-y-2 text-sm">
-                  {bucketCategories.length ? (
-                    bucketCategories.map((category) => (
-                      <li key={category.id} className="rounded-lg bg-white/5 px-3 py-2 text-slate-100">
-                        <div className="flex items-center justify-between gap-3">
-                          <span>{category.name}</span>
-                          <span className="text-xs text-slate-300">{formatCurrency(category.idealMonthlyAmount ?? 0)}</span>
-                        </div>
-                      </li>
-                    ))
-                  ) : (
-                    <li className="text-xs text-slate-400">Aún sin categorías</li>
-                  )}
-                </ul>
-              </article>
-            );
-          })}
-        </div>
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,320px)_1fr]">
+        <CategoryForm userBuckets={userBuckets} bucketMode={appUser.bucketMode} />
+        <CategoryManager categories={categories} userBuckets={userBuckets} bucketMode={appUser.bucketMode} />
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,320px)_1fr]">
-        <CategoryForm />
-        <CategoryManager categories={categories} />
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,320px)_1fr]">
-        <RuleForm categories={categories} />
-        <RuleManager rules={rules} categories={categories} />
+        <RuleForm categories={categories} userBuckets={userBuckets} bucketMode={appUser.bucketMode} />
+        <RuleManager rules={rules} categories={categories} userBuckets={userBuckets} bucketMode={appUser.bucketMode} />
       </section>
     </div>
   );

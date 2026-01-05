@@ -5,7 +5,7 @@ import { z } from "zod";
 import { serverContainer } from "@/infrastructure/config/server-container";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { toAppUtc } from "@/lib/dates/timezone";
-import { resolvePresetBucket } from "@/lib/buckets/assert-user-bucket";
+import { assertUserBucket } from "@/lib/buckets/assert-user-bucket";
 import { ActionState } from "./action-state";
 
 const createSchema = z.object({
@@ -13,7 +13,7 @@ const createSchema = z.object({
   amount: z.coerce.number(),
   currency: z.string().min(3),
   merchant: z.string().optional(),
-  bucket: z.enum(["NEEDS", "WANTS", "SAVINGS"]),
+  userBucketId: z.string().cuid(),
   categoryId: z.string().optional(),
   startDate: z.coerce.date(),
   recurrence: z.enum(["MONTHLY"]),
@@ -27,7 +27,7 @@ export async function createScheduledTransactionAction(_prev: ActionState, formD
     amount: formData.get("amount"),
     currency: formData.get("currency") ?? "DOP",
     merchant: formData.get("merchant") ?? undefined,
-    bucket: formData.get("bucket"),
+    userBucketId: formData.get("userBucketId"),
     categoryId: formData.get("categoryId") || undefined,
     startDate: formData.get("startDate"),
     recurrence: formData.get("recurrence") ?? "MONTHLY",
@@ -41,14 +41,14 @@ export async function createScheduledTransactionAction(_prev: ActionState, formD
     const { appUser } = await requireAuth();
     const { createScheduledTransactionUseCase } = serverContainer();
     const normalizedAmount = result.data.amount < 0 ? result.data.amount : -Math.abs(result.data.amount);
-    const presetBucket = await resolvePresetBucket(appUser.id, result.data.bucket);
+    const bucket = await assertUserBucket(appUser.id, result.data.userBucketId);
     await createScheduledTransactionUseCase.execute({
       userId: appUser.id,
       name: result.data.name,
       amount: normalizedAmount,
       currency: result.data.currency,
       merchant: result.data.merchant,
-      userBucketId: presetBucket.id,
+      userBucketId: bucket.id,
       categoryId: result.data.categoryId,
       startDate: toAppUtc(result.data.startDate),
       recurrence: result.data.recurrence,

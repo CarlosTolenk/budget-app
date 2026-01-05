@@ -7,8 +7,24 @@ export class BancoPopularAdapter implements BankAdapter {
   readonly name = "banco-popular";
 
   matches(message: EmailMessage): boolean {
-    const from = message.from.email.toLowerCase();
-    return from.includes("popularenlinea.com") || /notificación de consumo/i.test(message.subject);
+    const from = normalizeText(message.from.email);
+    const subject = normalizeText(message.subject);
+    const snippet = normalizeText(message.snippet ?? "");
+    const body = normalizeText(message.body);
+
+    if (from.includes("popularenlinea.com")) {
+      return true;
+    }
+
+    if (subject.includes("notificacion de consumo")) {
+      return true;
+    }
+
+    const forwardedIndicator = [snippet, body].some((text) =>
+      POPULAR_BODY_KEYWORDS.some((keyword) => text.includes(keyword)),
+    );
+
+    return forwardedIndicator;
   }
 
   parse(message: EmailMessage) {
@@ -32,4 +48,23 @@ export class BancoPopularAdapter implements BankAdapter {
     };
   }
 
+}
+
+const RAW_POPULAR_BODY_KEYWORDS = [
+  "notificaciones@popularenlinea.com",
+  "banco popular dominicano",
+  "tarjeta visa debito",
+  "tarjeta visa débito",
+  "gracias por utilizar su tarjeta",
+];
+
+const POPULAR_BODY_KEYWORDS = RAW_POPULAR_BODY_KEYWORDS.map((keyword) => normalizeText(keyword));
+
+function normalizeText(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }

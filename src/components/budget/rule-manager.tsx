@@ -6,14 +6,17 @@ import type { Rule } from "@/domain/rules/rule";
 import type { Category } from "@/domain/categories/category";
 import { initialActionState } from "@/app/actions/action-state";
 import { deleteRuleAction, updateRuleAction } from "@/app/actions/rule-actions";
-import { bucketOptions, type BucketValue } from "@/components/forms/bucket-options";
+import { UserBucket } from "@/domain/user-buckets/user-bucket";
+import { BucketMode } from "@/domain/users/user";
 
 interface RuleManagerProps {
   rules: Rule[];
   categories: Category[];
+  userBuckets: UserBucket[];
+  bucketMode: BucketMode;
 }
 
-export function RuleManager({ rules, categories }: RuleManagerProps) {
+export function RuleManager({ rules, categories, userBuckets, bucketMode }: RuleManagerProps) {
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [updateState, updateAction] = useActionState(updateRuleAction, initialActionState);
@@ -22,6 +25,7 @@ export function RuleManager({ rules, categories }: RuleManagerProps) {
   useEffect(() => {
     if (updateState.status === "success") {
       router.refresh();
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEditingId(null);
     }
   }, [updateState, router]);
@@ -29,6 +33,7 @@ export function RuleManager({ rules, categories }: RuleManagerProps) {
   useEffect(() => {
     if (deleteState.status === "success") {
       router.refresh();
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEditingId(null);
     }
   }, [deleteState, router]);
@@ -46,9 +51,18 @@ export function RuleManager({ rules, categories }: RuleManagerProps) {
       })),
     [categories],
   );
-  const deriveBucket = (categoryId: string): BucketValue => {
+  const availableBuckets = useMemo(
+    () => userBuckets.filter((bucket) => bucket.mode === bucketMode),
+    [userBuckets, bucketMode],
+  );
+  const selectBuckets = availableBuckets.length ? availableBuckets : userBuckets;
+  const bucketNameMap = useMemo(() => new Map(userBuckets.map((bucket) => [bucket.id, bucket.name])), [userBuckets]);
+  const deriveBucketId = (categoryId: string): string => {
     const category = categories.find((entry) => entry.id === categoryId);
-    return (category?.bucket ?? "NEEDS") as BucketValue;
+    if (category) {
+      return category.userBucketId;
+    }
+    return selectBuckets[0]?.id ?? "";
   };
 
   return (
@@ -69,7 +83,7 @@ export function RuleManager({ rules, categories }: RuleManagerProps) {
               const categoryLabel = categoryOptions.find((option) => option.value === rule.categoryId)?.label ?? "Sin categoría";
               const isEditing = editingId === rule.id;
               if (isEditing) {
-                const defaultBucket = deriveBucket(rule.categoryId);
+                const defaultBucket = rule.userBucketId || deriveBucketId(rule.categoryId);
                 return (
                   <li key={rule.id} className="rounded-xl border border-emerald-300/30 bg-emerald-300/5 p-3">
                     <form action={updateAction} className="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-end">
@@ -95,14 +109,15 @@ export function RuleManager({ rules, categories }: RuleManagerProps) {
                       <label className="text-[11px] uppercase tracking-wide text-slate-400">
                         Renglón
                         <select
-                          name="bucket"
+                          name="userBucketId"
                           defaultValue={defaultBucket}
                           className="mt-1 w-32 rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
                           required
+                          disabled={!selectBuckets.length}
                         >
-                          {bucketOptions.map((option) => (
-                            <option key={option.value} value={option.value} className="text-slate-900">
-                              {option.label}
+                          {selectBuckets.map((bucket) => (
+                            <option key={bucket.id} value={bucket.id} className="text-slate-900">
+                              {bucket.name}
                             </option>
                           ))}
                         </select>
@@ -145,6 +160,7 @@ export function RuleManager({ rules, categories }: RuleManagerProps) {
                     <p className="font-mono text-sm text-emerald-200">/{rule.pattern}/</p>
                     <p className="text-xs uppercase tracking-wide text-slate-400">Prioridad #{rule.priority}</p>
                     <p className="text-sm font-semibold text-white">{categoryLabel}</p>
+                    <p className="text-xs text-slate-400">{bucketNameMap.get(rule.userBucketId) ?? "Sin bucket"}</p>
                   </div>
                   <div className="flex gap-2">
                     <button

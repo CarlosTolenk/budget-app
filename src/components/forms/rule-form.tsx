@@ -1,26 +1,44 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { createRuleAction } from "@/app/actions/rule-actions";
 import { initialActionState } from "@/app/actions/action-state";
 import { Category } from "@/domain/categories/category";
-import { bucketOptions, type BucketValue } from "@/components/forms/bucket-options";
+import { UserBucket } from "@/domain/user-buckets/user-bucket";
+import { BucketMode } from "@/domain/users/user";
+import { pickDefaultUserBucketId } from "@/lib/buckets/user-bucket-helpers";
 
 interface RuleFormProps {
   categories: Category[];
+  userBuckets: UserBucket[];
+  bucketMode: BucketMode;
 }
 
-export function RuleForm({ categories }: RuleFormProps) {
+export function RuleForm({ categories, userBuckets, bucketMode }: RuleFormProps) {
   const [state, formAction] = useActionState(createRuleAction, initialActionState);
-  const [bucket, setBucket] = useState<BucketValue>("NEEDS");
+  const availableBuckets = useMemo(
+    () => userBuckets.filter((bucket) => bucket.mode === bucketMode),
+    [userBuckets, bucketMode],
+  );
+  const selectBuckets = availableBuckets.length ? availableBuckets : userBuckets;
+  const defaultBucketId = useMemo(
+    () => pickDefaultUserBucketId(selectBuckets, categories),
+    [selectBuckets, categories],
+  );
+  const [bucketId, setBucketId] = useState(defaultBucketId);
   const [categoryId, setCategoryId] = useState("");
+
+  useEffect(() => {
+    setBucketId(defaultBucketId);
+  }, [defaultBucketId]);
+
   const filteredCategories = useMemo(() => {
-    const available = categories.filter((category) => category.bucket === bucket);
-    if (available.length === 0) {
-      return categories.filter((category) => category.bucket);
+    if (!bucketId) {
+      return categories;
     }
-    return available;
-  }, [categories, bucket]);
+    const available = categories.filter((category) => category.userBucketId === bucketId);
+    return available.length ? available : categories;
+  }, [categories, bucketId]);
   const resolvedCategoryId = useMemo(() => {
     if (!filteredCategories.length) {
       return "";
@@ -55,18 +73,20 @@ export function RuleForm({ categories }: RuleFormProps) {
       <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-slate-400">
         Renglón
         <select
-          name="bucket"
+          name="userBucketId"
           className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
-          value={bucket}
-          onChange={(event) => setBucket(event.target.value as BucketValue)}
+          value={bucketId}
+          onChange={(event) => setBucketId(event.target.value)}
           required
+          disabled={!selectBuckets.length}
         >
-          {bucketOptions.map((option) => (
-            <option key={option.value} value={option.value} className="text-slate-900">
-              {option.label}
+          {selectBuckets.map((bucket) => (
+            <option key={bucket.id} value={bucket.id} className="text-slate-900">
+              {bucket.name}
             </option>
           ))}
         </select>
+        {!selectBuckets.length ? <span className="text-[10px] text-rose-300">Configura buckets para crear reglas.</span> : null}
       </label>
       <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-slate-400">
         Categoría

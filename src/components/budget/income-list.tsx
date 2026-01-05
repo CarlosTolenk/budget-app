@@ -26,6 +26,7 @@ export function IncomeList({ incomes }: IncomeListProps) {
 
   useEffect(() => {
     if (deleteState.status === "success") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIncomeToDelete(null);
     }
   }, [deleteState.status]);
