@@ -56,6 +56,8 @@ const currencyDescriptors = new Set([
   "eu$",
 ]);
 
+const MAX_COMBINED_LINES = 6;
+
 export function parseTabularTransaction(
   message: EmailMessage,
   options: ParseOptions = {},
@@ -104,18 +106,19 @@ export function parseTabularTransaction(
 
 function findDataLine(body: string): string | null {
   const normalized = body.replace(/\r/g, "\n").replace(/\u00a0/g, " ");
-  const lines = normalized
+  const cleanedLines = normalized
     .split(/\n+/)
     .map((line) => line.replace(/\t+/g, " ").trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter((line) => !isForwardHeader(line));
 
-  for (const line of lines) {
-    if (isForwardHeader(line)) {
-      continue;
-    }
-
-    if (AMOUNT_REGEX.test(line) && DATE_REGEX.test(line)) {
-      return line;
+  for (let i = 0; i < cleanedLines.length; i++) {
+    let combined = "";
+    for (let offset = 0; offset < MAX_COMBINED_LINES && i + offset < cleanedLines.length; offset++) {
+      combined = combined ? `${combined} ${cleanedLines[i + offset]}` : cleanedLines[i + offset];
+      if (AMOUNT_REGEX.test(combined) && DATE_REGEX.test(combined)) {
+        return combined;
+      }
     }
   }
 
@@ -135,12 +138,17 @@ function isForwardHeader(line: string): boolean {
   const lower = line.toLowerCase();
   return (
     lower.startsWith("from:") ||
+    lower.startsWith("de:") ||
     lower.startsWith("date:") ||
+    lower.startsWith("fecha:") ||
     lower.startsWith("subject:") ||
+    lower.startsWith("asunto:") ||
     lower.startsWith("to:") ||
+    lower.startsWith("para:") ||
     lower.startsWith("cc:") ||
     lower.startsWith("bcc:") ||
     lower.includes("forwarded message") ||
+    lower.includes("mensaje reenviado") ||
     /^-+$/.test(line)
   );
 }
