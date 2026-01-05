@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { UserBucketRepository } from "@/domain/repositories/user-bucket-repository";
 import { PresetBucketKey, UserBucket } from "@/domain/user-buckets/user-bucket";
 import { memoryBuckets } from "@/infrastructure/repositories/memory/memory-data";
+import { presetBucketCopy } from "@/domain/user-buckets/preset-buckets";
 
 export class MemoryUserBucketRepository implements UserBucketRepository {
   private buckets: UserBucket[] = memoryBuckets;
@@ -17,6 +18,23 @@ export class MemoryUserBucketRepository implements UserBucketRepository {
 
   async findByPresetKey(userId: string, presetKey: PresetBucketKey): Promise<UserBucket | null> {
     return this.buckets.find((entry) => entry.userId === userId && entry.presetKey === presetKey) ?? null;
+  }
+
+  async createPreset(userId: string, presetKey: PresetBucketKey): Promise<UserBucket> {
+    const sortOrder = this.buckets.filter((bucket) => bucket.userId === userId).length;
+    const bucket: UserBucket = {
+      id: randomUUID(),
+      userId,
+      name: presetBucketCopy[presetKey].label,
+      sortOrder,
+      color: null,
+      mode: "PRESET",
+      presetKey,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.buckets = [...this.buckets, bucket];
+    return bucket;
   }
 
   async createCustom(userId: string, name: string): Promise<UserBucket> {

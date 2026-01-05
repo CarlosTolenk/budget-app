@@ -122,7 +122,8 @@ function findDataLine(body: string): string | null {
     }
   }
 
-  return null;
+  const flattened = cleanedLines.join(" ");
+  return AMOUNT_REGEX.test(flattened) && DATE_REGEX.test(flattened) ? flattened : null;
 }
 
 function tokenize(line: string): string[] {

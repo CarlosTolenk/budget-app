@@ -1,6 +1,7 @@
 import { prisma } from "@/infrastructure/db/prisma-client";
 import { UserBucketRepository } from "@/domain/repositories/user-bucket-repository";
 import { PresetBucketKey, UserBucket } from "@/domain/user-buckets/user-bucket";
+import { presetBucketCopy } from "@/domain/user-buckets/preset-buckets";
 
 export class PrismaUserBucketRepository implements UserBucketRepository {
   async listByUserId(userId: string): Promise<UserBucket[]> {
@@ -26,6 +27,25 @@ export class PrismaUserBucketRepository implements UserBucketRepository {
       where: { userId, presetKey },
     });
     return record ? this.map(record) : null;
+  }
+
+  async createPreset(userId: string, presetKey: PresetBucketKey): Promise<UserBucket> {
+    const { _max } = await prisma.userBucket.aggregate({
+      where: { userId },
+      _max: { sortOrder: true },
+    });
+    const sortOrder = (_max.sortOrder ?? -1) + 1;
+    const record = await prisma.userBucket.create({
+      data: {
+        userId,
+        name: presetBucketCopy[presetKey].label,
+        sortOrder,
+        color: null,
+        mode: "PRESET",
+        presetKey,
+      },
+    });
+    return this.map(record);
   }
 
   async createCustom(userId: string, name: string): Promise<UserBucket> {
