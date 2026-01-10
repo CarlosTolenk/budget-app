@@ -44,7 +44,7 @@ export async function requireAuth(): Promise<AuthenticatedUser> {
 }
 
 async function resolveAppUser(supabaseUser: { id: string; email?: string | null }): Promise<AppUser> {
-  const { userRepository } = serverContainer();
+  const { userRepository, userBucketRepository } = serverContainer();
   let appUser = await userRepository.findBySupabaseId(supabaseUser.id);
 
   if (!appUser) {
@@ -62,6 +62,11 @@ async function resolveAppUser(supabaseUser: { id: string; email?: string | null 
     }
   } else if (supabaseUser.email && appUser.email !== supabaseUser.email) {
     appUser = await userRepository.update(appUser.id, { email: supabaseUser.email });
+  }
+
+  await userBucketRepository.ensurePresetBuckets(appUser.id);
+  if (appUser.bucketMode === "PRESET") {
+    await userBucketRepository.activatePresetBuckets(appUser.id);
   }
 
   return appUser;

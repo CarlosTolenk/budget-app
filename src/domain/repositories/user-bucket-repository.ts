@@ -7,4 +7,7 @@ export interface UserBucketRepository {
   createPreset(userId: string, presetKey: PresetBucketKey): Promise<UserBucket>;
   createCustom(userId: string, name: string): Promise<UserBucket>;
   rename(userId: string, bucketId: string, name: string): Promise<UserBucket>;
+  markAllAsCustom(userId: string): Promise<void>;
+  ensurePresetBuckets(userId: string): Promise<UserBucket[]>;
+  activatePresetBuckets(userId: string): Promise<void>;
 }

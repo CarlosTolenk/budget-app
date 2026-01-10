@@ -1,7 +1,7 @@
 import { prisma } from "@/infrastructure/db/prisma-client";
 import { UserBucketRepository } from "@/domain/repositories/user-bucket-repository";
 import { PresetBucketKey, UserBucket } from "@/domain/user-buckets/user-bucket";
-import { presetBucketCopy } from "@/domain/user-buckets/preset-buckets";
+import { presetBucketCopy, presetBucketOrder } from "@/domain/user-buckets/preset-buckets";
 
 export class PrismaUserBucketRepository implements UserBucketRepository {
   async listByUserId(userId: string): Promise<UserBucket[]> {
@@ -79,6 +79,55 @@ export class PrismaUserBucketRepository implements UserBucketRepository {
       data: { name },
     });
     return this.map(record);
+  }
+
+  async markAllAsCustom(userId: string): Promise<void> {
+    await prisma.userBucket.updateMany({
+      where: { userId },
+      data: { mode: "CUSTOM" },
+    });
+  }
+
+  async ensurePresetBuckets(userId: string): Promise<UserBucket[]> {
+    const existing = await prisma.userBucket.findMany({
+      where: { userId, presetKey: { not: null } },
+    });
+    const missingKeys = presetBucketOrder.filter((key) => !existing.some((bucket) => bucket.presetKey === key));
+    if (missingKeys.length) {
+      await prisma.$transaction(
+        missingKeys.map((key) =>
+          prisma.userBucket.create({
+            data: {
+              userId,
+              name: presetBucketCopy[key].label,
+              sortOrder: presetBucketOrder.indexOf(key),
+              color: null,
+              mode: "PRESET",
+              presetKey: key,
+            },
+          }),
+        ),
+      );
+    }
+    return this.listByUserId(userId);
+  }
+
+  async activatePresetBuckets(userId: string): Promise<void> {
+    await prisma.userBucket.updateMany({
+      where: { userId, presetKey: { not: null } },
+      data: { mode: "PRESET" },
+    });
+    await Promise.all(
+      presetBucketOrder.map((key, index) =>
+        prisma.userBucket.updateMany({
+          where: { userId, presetKey: key },
+          data: {
+            name: presetBucketCopy[key].label,
+            sortOrder: index,
+          },
+        }),
+      ),
+    );
   }
 
   private map(record: {

@@ -10,6 +10,7 @@ import { CategoryManager } from "@/components/budget/category-manager";
 import { RuleManager } from "@/components/budget/rule-manager";
 import { BucketModeSelector } from "@/components/budget/bucket-mode-selector";
 import { UserBucketsGrid } from "@/components/budget/user-buckets-grid";
+import { env } from "@/infrastructure/config/env";
 
 type BudgetPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -27,6 +28,7 @@ function resolveIncomeMonth(value?: string): string {
 export default async function BudgetPage({ searchParams }: BudgetPageProps) {
   const { appUser } = await requireAuth();
   const userId = appUser.id;
+  const customBucketsEnabled = env.NEXT_PUBLIC_CUSTOM_BUCKETS === "on";
   const resolvedSearch = searchParams ? await searchParams : undefined;
   const incomeMonthParam = typeof resolvedSearch?.incomeMonth === "string" ? resolvedSearch.incomeMonth : undefined;
   const incomeMonth = resolveIncomeMonth(incomeMonthParam);
@@ -55,24 +57,31 @@ export default async function BudgetPage({ searchParams }: BudgetPageProps) {
 
   const totalIncome = incomes.reduce((sum, income) => sum + income.amount, 0);
 
+  const headerCopy =
+    appUser.bucketMode === "PRESET"
+      ? "Registra ingresos y deja que el sistema calcule 50/30/20 automáticamente."
+      : "Registra tus ingresos y organiza los buckets personalizados sin porcentajes sugeridos.";
+
   return (
     <div className="flex flex-col gap-8">
       <header>
         <p className="text-sm uppercase tracking-wide text-slate-400">Configuración · {formatMonthLabel(summary.month)}</p>
         <h1 className="text-3xl font-semibold">Ingresos y categorías</h1>
-        <p className="text-base text-slate-300">Registra ingresos y deja que el sistema calcule 50/30/20 automáticamente.</p>
+        <p className="text-base text-slate-300">{headerCopy}</p>
       </header>
 
-      <BucketModeSelector currentMode={appUser.bucketMode} />
+      {customBucketsEnabled ? <BucketModeSelector currentMode={appUser.bucketMode} /> : null}
 
-      <UserBucketsGrid
-        bucketMode={appUser.bucketMode}
-        buckets={activeBuckets}
-        categoriesByBucketId={categoriesByBucketId}
-        bucketSummaries={bucketSummaryMap}
-        canAddMore={canAddMoreBuckets}
-        remainingSlots={remainingSlots}
-      />
+      {customBucketsEnabled ? (
+        <UserBucketsGrid
+          bucketMode={appUser.bucketMode}
+          buckets={activeBuckets}
+          categoriesByBucketId={categoriesByBucketId}
+          bucketSummaries={bucketSummaryMap}
+          canAddMore={canAddMoreBuckets}
+          remainingSlots={remainingSlots}
+        />
+      ) : null}
 
       <section className="grid gap-4 lg:grid-cols-2">
         <IncomeForm month={incomeMonth} />

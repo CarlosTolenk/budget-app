@@ -29,7 +29,13 @@ export async function updateBucketModeAction(mode: BucketMode): Promise<void> {
   if (appUser.bucketMode === mode) {
     return;
   }
-  const { userRepository } = serverContainer();
+  const { userRepository, userBucketRepository } = serverContainer();
+  if (mode === "CUSTOM") {
+    await userBucketRepository.markAllAsCustom(appUser.id);
+  } else {
+    await userBucketRepository.ensurePresetBuckets(appUser.id);
+    await userBucketRepository.activatePresetBuckets(appUser.id);
+  }
   await userRepository.update(appUser.id, { bucketMode: mode });
   revalidateBudgetViews();
 }

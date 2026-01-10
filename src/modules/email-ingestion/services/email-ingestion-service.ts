@@ -4,6 +4,7 @@ import {
     TransactionRepository,
     TransactionDraftRepository,
     UserBucketRepository,
+    UserRepository,
 } from "@/domain/repositories";
 import { CreateDraftInput } from "@/domain/transaction-drafts/transaction-draft";
 import { EmailProvider } from "../providers/email-provider";
@@ -11,6 +12,7 @@ import { BankAdapter } from "../adapters/bank-adapter";
 import { EmailMessage } from "../types/email-message";
 import { toAppUtc } from "@/lib/dates/timezone";
 import { PresetBucketKey } from "@/domain/user-buckets/user-bucket";
+import { pickDefaultUserBucketId } from "@/lib/buckets/user-bucket-helpers";
 
 export interface EmailIngestionResult {
     imported: number;
@@ -32,18 +34,27 @@ export class EmailIngestionService {
         private readonly categoryRepository: CategoryRepository,
         private readonly ruleRepository: RuleRepository,
         private readonly userBucketRepository: UserBucketRepository,
+        private readonly userRepository: UserRepository,
     ) {
     }
 
     async run(userId: string, provider: EmailProvider): Promise<EmailIngestionResult> {
-        const [messages, categories, rules] = await Promise.all([
+        const [messages, categories, rules, userBuckets, user] = await Promise.all([
             provider.listMessages(),
             this.categoryRepository.listAll(userId),
             this.ruleRepository.listAll(userId),
+            this.userBucketRepository.listByUserId(userId),
+            this.userRepository.findById(userId),
         ]);
 
         const errors: EmailIngestionResult["errors"] = [];
         const bucketCache = new Map<PresetBucketKey, string>();
+        const bucketMode = user?.bucketMode ?? "PRESET";
+        const customBuckets = userBuckets.filter((bucket) => bucket.mode === "CUSTOM");
+        const defaultCustomBucketId =
+            bucketMode === "CUSTOM" && customBuckets.length
+                ? pickDefaultUserBucketId(customBuckets, categories)
+                : undefined;
         const toPersist: CreateDraftInput[] = [];
 
         for (const message of messages) {
@@ -80,6 +91,9 @@ export class EmailIngestionService {
             let userBucketId: string | undefined = category?.userBucketId;
             if (!userBucketId && presetBucket) {
                 userBucketId = await this.ensurePresetBucket(userId, presetBucket, bucketCache);
+            }
+            if (!userBucketId && defaultCustomBucketId) {
+                userBucketId = defaultCustomBucketId;
             }
             if (!userBucketId) {
                 recordSkip("parse-failed");

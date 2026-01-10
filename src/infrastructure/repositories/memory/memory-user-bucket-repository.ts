@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { UserBucketRepository } from "@/domain/repositories/user-bucket-repository";
 import { PresetBucketKey, UserBucket } from "@/domain/user-buckets/user-bucket";
 import { memoryBuckets } from "@/infrastructure/repositories/memory/memory-data";
-import { presetBucketCopy } from "@/domain/user-buckets/preset-buckets";
+import { presetBucketCopy, presetBucketOrder } from "@/domain/user-buckets/preset-buckets";
 
 export class MemoryUserBucketRepository implements UserBucketRepository {
   private buckets: UserBucket[] = memoryBuckets;
@@ -66,5 +66,44 @@ export class MemoryUserBucketRepository implements UserBucketRepository {
     };
     this.buckets = [...this.buckets.slice(0, index), updated, ...this.buckets.slice(index + 1)];
     return updated;
+  }
+
+  async markAllAsCustom(userId: string): Promise<void> {
+    this.buckets = this.buckets.map((bucket) =>
+      bucket.userId === userId
+        ? {
+            ...bucket,
+            mode: "CUSTOM",
+            updatedAt: new Date(),
+          }
+        : bucket,
+    );
+  }
+
+  async ensurePresetBuckets(userId: string): Promise<UserBucket[]> {
+    for (const key of presetBucketOrder) {
+      const exists = this.buckets.find((bucket) => bucket.userId === userId && bucket.presetKey === key);
+      if (!exists) {
+        await this.createPreset(userId, key);
+      }
+    }
+    return this.listByUserId(userId);
+  }
+
+  async activatePresetBuckets(userId: string): Promise<void> {
+    this.buckets = this.buckets.map((bucket) => {
+      if (bucket.userId !== userId || !bucket.presetKey) {
+        return bucket;
+      }
+      const order = presetBucketOrder.indexOf(bucket.presetKey);
+      const preset = presetBucketCopy[bucket.presetKey];
+      return {
+        ...bucket,
+        mode: "PRESET",
+        name: preset.label,
+        sortOrder: order === -1 ? bucket.sortOrder : order,
+        updatedAt: new Date(),
+      };
+    });
   }
 }

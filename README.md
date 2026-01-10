@@ -21,12 +21,13 @@ Aplicación Next.js 14 orientada a un MVP escalable para controlar un presupuest
     DIRECT_URL="file:./dev.db"
     NEXT_PUBLIC_SUPABASE_URL=
     NEXT_PUBLIC_SUPABASE_ANON_KEY=
+    NEXT_PUBLIC_CUSTOM_BUCKETS=off
     SUPABASE_SERVICE_ROLE_KEY=
     GMAIL_CLIENT_ID=
     GMAIL_CLIENT_SECRET=
     GMAIL_REFRESH_TOKEN=
      ```
-   - `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` apuntan al proyecto de Supabase que gestionará las sesiones. `SUPABASE_SERVICE_ROLE_KEY` sólo se usa del lado del servidor (cron/queues) y **nunca** se expone en el cliente.
+   - `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` apuntan al proyecto de Supabase que gestionará las sesiones. `NEXT_PUBLIC_CUSTOM_BUCKETS` controla si el selector preset/custom se despliega (`on`/`off`). `SUPABASE_SERVICE_ROLE_KEY` sólo se usa del lado del servidor (cron/queues) y **nunca** se expone en el cliente.
    - Para moverte a PostgreSQL (Vercel Postgres u otro servicio) actualiza `prisma/schema.prisma` para que `provider = "postgresql"` y sustituye `DATABASE_URL`/`DIRECT_URL` por la cadena de conexión correspondiente.
    - Mientras no existan credenciales reales de Gmail, se usa un `MockEmailProvider`; los datos persisten en el archivo SQLite local.
 3. **Ejecutar migraciones de Prisma**
@@ -70,7 +71,7 @@ src/
 
 - **Separación de capas:** La UI solo consume casos de uso (`serverContainer`). No hay lógica de negocio dentro de los componentes React.
 - **Repositorios duales:** Prisma para Postgres y versiones en memoria (seed en `memory-data.ts`) para demos o tests sin base de datos.
-- **Email ingestion:** `EmailProvider` abstrae la fuente (Gmail OAuth). `BankAdapter` permite parsear distintos formatos por banco. `EmailIngestionService` maneja fetch → dedupe por `emailMessageId` → categorización por reglas → persiste como **borradores** que luego se aprueban manualmente.
+- **Email ingestion:** `EmailProvider` abstrae la fuente (Gmail OAuth). `BankAdapter` permite parsear distintos formatos por banco. `EmailIngestionService` maneja fetch → dedupe por `emailMessageId` → categorización por reglas → persiste como **borradores** que luego se aprueban manualmente. Cuando el usuario opera en modo custom, la ingesta asigna automáticamente el primer bucket personalizado disponible si no existe un preset claro.
 
 ## Cron `/api/cron/import-emails`
 - Ruta serverless (`src/app/api/cron/import-emails/route.ts`) lista para conectarse a **Vercel Cron**.

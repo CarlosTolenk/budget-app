@@ -90,15 +90,16 @@ export function UserBucketsGrid({
             const categories = categoriesByBucketId[bucket.id] ?? [];
             const targetRatio =
               summary?.targetRatio ?? (bucket.presetKey ? presetBucketCopy[bucket.presetKey].targetRatio : null);
-            const bucketLabel = bucket.presetKey ? presetBucketCopy[bucket.presetKey].label : bucket.name;
-            const bucketDescription = bucket.presetKey
-              ? presetBucketCopy[bucket.presetKey].description
-              : "Bucket personalizado";
+            const showPresetDetails = bucketMode === "PRESET" && Boolean(bucket.presetKey);
+            const bucketLabel = showPresetDetails && bucket.presetKey ? presetBucketCopy[bucket.presetKey].label : bucket.name;
+            const bucketDescription =
+              showPresetDetails && bucket.presetKey ? presetBucketCopy[bucket.presetKey].description : "Bucket personalizado";
             const planned = summary?.planned ?? categories.reduce((sum, category) => sum + (category.idealMonthlyAmount ?? 0), 0);
             const spent = summary?.spent ?? 0;
             const target = summary?.target ?? 0;
             const delta = target - spent;
             const planDelta = planned - spent;
+            const showTarget = bucketMode === "PRESET" && Boolean(target);
 
             return (
               <article key={bucket.id} className="flex h-full flex-col rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -119,10 +120,10 @@ export function UserBucketsGrid({
                 </div>
                 <div className="mt-3 text-sm text-slate-300">
                   <p>
-                    Plan ideal{" "}
+                    {bucketMode === "PRESET" ? "Plan ideal" : "Planificado"}{" "}
                     <span className="font-semibold text-white">{formatCurrency(planned)}</span>
                   </p>
-                  {target ? (
+                  {showTarget ? (
                     <p>
                       Meta mensual{" "}
                       <span className="font-semibold text-white">{formatCurrency(target)}</span>{" "}
@@ -136,7 +137,7 @@ export function UserBucketsGrid({
                   <p className={`text-xs ${planDelta >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
                     {planDelta >= 0 ? "Disponible del plan" : "Sobre el plan"} {formatCurrency(Math.abs(planDelta))}
                   </p>
-                  {target ? (
+                  {showTarget ? (
                     <p className={`text-xs ${delta >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
                       {delta >= 0 ? "Disponible de la meta" : "Exceso total"} {formatCurrency(Math.abs(delta))}
                     </p>

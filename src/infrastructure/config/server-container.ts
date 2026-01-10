@@ -145,6 +145,7 @@ export function serverContainer(): ServerContainer {
     categoryRepository,
     ruleRepository,
     userBucketRepository,
+    userRepository,
   );
 
   const financialStatsUseCase = new GetFinancialStatsUseCase(transactionRepository, incomeRepository, categoryRepository);

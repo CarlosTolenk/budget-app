@@ -8,6 +8,7 @@ const envSchema = z.object({
   GMAIL_REFRESH_TOKEN: z.string().optional(),
   NEXT_PUBLIC_SUPABASE_URL: z.string().optional(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional(),
+  NEXT_PUBLIC_CUSTOM_BUCKETS: z.enum(["on", "off"]).default("off"),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
 });
 
@@ -19,6 +20,7 @@ const parsed = envSchema.parse({
   GMAIL_REFRESH_TOKEN: process.env.GMAIL_REFRESH_TOKEN,
   NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  NEXT_PUBLIC_CUSTOM_BUCKETS: process.env.NEXT_PUBLIC_CUSTOM_BUCKETS ?? "off",
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
 });
 
