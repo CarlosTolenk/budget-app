@@ -112,7 +112,7 @@ export async function updateBucketColorAction(_prev: ActionState, formData: Form
   const bucketId = z.string().min(1).parse(formData.get("bucketId"));
   const colorResult = colorSchema.safeParse(formData.get("color") ?? "");
   if (!colorResult.success) {
-    return { status: "error", message: colorResult.error.errors[0]?.message ?? "Color inválido" };
+    return { status: "error", message: colorResult.error.issues[0]?.message ?? "Color inválido" };
   }
 
   try {
@@ -186,55 +186,9 @@ async function reassignCustomDataToPreset(
     return;
   }
 
-  const reassignmentMap = new Map<string, string>();
-  customBuckets.forEach((bucket, index) => {
+  for (let index = 0; index < customBuckets.length; index += 1) {
+    const source = customBuckets[index];
     const target = presetBuckets[index % presetBuckets.length];
-    reassignmentMap.set(bucket.id, target.id);
-  });
-
-  await Promise.all([
-    reassignCategories(userId, reassignmentMap, container),
-    reassignRules(userId, reassignmentMap, container),
-  ]);
-}
-
-async function reassignCategories(
-  userId: string,
-  map: Map<string, string>,
-  container: ReturnType<typeof serverContainer>,
-): Promise<void> {
-  const categories = await container.categoryRepository.listAll(userId);
-  const updates = categories
-    .filter((category) => map.has(category.userBucketId))
-    .map((category) =>
-      container.categoryRepository.update({
-        id: category.id,
-        userId,
-        name: category.name,
-        userBucketId: map.get(category.userBucketId)!,
-        idealMonthlyAmount: category.idealMonthlyAmount ?? 0,
-      }),
-    );
-  await Promise.all(updates);
-}
-
-async function reassignRules(
-  userId: string,
-  map: Map<string, string>,
-  container: ReturnType<typeof serverContainer>,
-): Promise<void> {
-  const rules = await container.ruleRepository.listAll(userId);
-  const updates = rules
-    .filter((rule) => map.has(rule.userBucketId))
-    .map((rule) =>
-      container.ruleRepository.update({
-        id: rule.id,
-        userId,
-        pattern: rule.pattern,
-        priority: rule.priority,
-        categoryId: rule.categoryId,
-        userBucketId: map.get(rule.userBucketId)!,
-      }),
-    );
-  await Promise.all(updates);
+    await userBucketRepository.transferData(userId, source.id, target.id);
+  }
 }

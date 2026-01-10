@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/infrastructure/db/prisma-client";
 import { UserBucketRepository } from "@/domain/repositories/user-bucket-repository";
 import { PresetBucketKey, UserBucket } from "@/domain/user-buckets/user-bucket";
@@ -197,17 +198,42 @@ export class PrismaUserBucketRepository implements UserBucketRepository {
         throw new Error("Bucket destino inválido");
       }
 
-      const tablesToUpdate = [
-        tx.category.updateMany({ where: { userId, userBucketId: bucketId }, data: { userBucketId: targetBucketId } }),
-        tx.rule.updateMany({ where: { userId, userBucketId: bucketId }, data: { userBucketId: targetBucketId } }),
-        tx.transaction.updateMany({ where: { userId, userBucketId: bucketId }, data: { userBucketId: targetBucketId } }),
-        tx.transactionDraft.updateMany({ where: { userId, userBucketId: bucketId }, data: { userBucketId: targetBucketId } }),
-        tx.scheduledTransaction.updateMany({ where: { userId, userBucketId: bucketId }, data: { userBucketId: targetBucketId } }),
-        tx.budgetBucket.updateMany({ where: { userBucketId: bucketId }, data: { userBucketId: targetBucketId } }),
-      ];
-      await Promise.all(tablesToUpdate);
+      await this.reassignData(tx, userId, bucketId, targetBucketId);
       await tx.userBucket.delete({ where: { id: bucketId } });
     });
+  }
+
+  async transferData(userId: string, fromBucketId: string, targetBucketId: string): Promise<void> {
+    await prisma.$transaction(async (tx) => {
+      const source = await tx.userBucket.findFirst({ where: { id: fromBucketId, userId } });
+      if (!source) {
+        throw new Error("Bucket origen no encontrado");
+      }
+      const target = await tx.userBucket.findFirst({ where: { id: targetBucketId, userId } });
+      if (!target) {
+        throw new Error("Bucket destino no encontrado");
+      }
+      await this.reassignData(tx, userId, fromBucketId, targetBucketId);
+    });
+  }
+
+  private async reassignData(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    sourceBucketId: string,
+    targetBucketId: string,
+  ): Promise<void> {
+    await Promise.all([
+      tx.category.updateMany({ where: { userId, userBucketId: sourceBucketId }, data: { userBucketId: targetBucketId } }),
+      tx.rule.updateMany({ where: { userId, userBucketId: sourceBucketId }, data: { userBucketId: targetBucketId } }),
+      tx.transaction.updateMany({ where: { userId, userBucketId: sourceBucketId }, data: { userBucketId: targetBucketId } }),
+      tx.transactionDraft.updateMany({ where: { userId, userBucketId: sourceBucketId }, data: { userBucketId: targetBucketId } }),
+      tx.scheduledTransaction.updateMany({
+        where: { userId, userBucketId: sourceBucketId },
+        data: { userBucketId: targetBucketId },
+      }),
+      tx.budgetBucket.updateMany({ where: { userBucketId: sourceBucketId }, data: { userBucketId: targetBucketId } }),
+    ]);
   }
 
   private map(record: {

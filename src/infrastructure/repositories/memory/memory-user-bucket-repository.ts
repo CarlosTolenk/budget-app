@@ -189,6 +189,37 @@ export class MemoryUserBucketRepository implements UserBucketRepository {
       }
     };
 
+    this.reassignData(bucketId, targetBucketId, targetBucket);
+    this.buckets = this.buckets.filter((entry) => entry.id !== bucketId);
+  }
+
+  async transferData(userId: string, fromBucketId: string, targetBucketId: string): Promise<void> {
+    const source = this.buckets.find((entry) => entry.id === fromBucketId && entry.userId === userId);
+    if (!source) {
+      throw new Error("Bucket origen no encontrado");
+    }
+    const target = this.buckets.find((entry) => entry.id === targetBucketId && entry.userId === userId);
+    if (!target) {
+      throw new Error("Bucket destino no encontrado");
+    }
+    this.reassignData(fromBucketId, targetBucketId, target);
+  }
+
+  private reassignData(sourceBucketId: string, targetBucketId: string, targetBucket: UserBucket) {
+    const reassignCollection = (items: Array<{ userBucketId: string; userBucket?: UserBucket; bucket?: string | null }>) => {
+      for (const item of items) {
+        if (item.userBucketId === sourceBucketId) {
+          item.userBucketId = targetBucketId;
+          if (item.userBucket) {
+            item.userBucket = targetBucket;
+          }
+          if (Object.prototype.hasOwnProperty.call(item, "bucket")) {
+            (item as { bucket?: string | null }).bucket = targetBucket.presetKey ?? null;
+          }
+        }
+      }
+    };
+
     reassignCollection(memoryCategories);
     reassignCollection(memoryRules);
     reassignCollection(memoryTransactions);
@@ -196,13 +227,11 @@ export class MemoryUserBucketRepository implements UserBucketRepository {
     reassignCollection(memoryDrafts);
     if (memoryBudget.buckets) {
       for (const bucketRow of memoryBudget.buckets) {
-        if (bucketRow.userBucketId === bucketId) {
+        if (bucketRow.userBucketId === sourceBucketId) {
           bucketRow.userBucketId = targetBucketId;
           bucketRow.userBucket = targetBucket;
         }
       }
     }
-
-    this.buckets = this.buckets.filter((entry) => entry.id !== bucketId);
   }
 }

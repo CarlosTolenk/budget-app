@@ -13,4 +13,5 @@ export interface UserBucketRepository {
   updateColor(userId: string, bucketId: string, color: string | null): Promise<UserBucket>;
   reorder(userId: string, orderedIds: string[]): Promise<UserBucket[]>;
   deleteCustomBucket(userId: string, bucketId: string, targetBucketId: string): Promise<void>;
+  transferData(userId: string, fromBucketId: string, targetBucketId: string): Promise<void>;
 }
