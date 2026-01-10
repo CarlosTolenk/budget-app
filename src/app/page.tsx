@@ -10,6 +10,8 @@ import { headers } from "next/headers";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { CategorySpendingChart } from "@/components/dashboard/category-spending-chart";
 import { PlanSummaryCard } from "@/components/dashboard/plan-summary-card";
+import { KpiGrid } from "@/components/dashboard/kpi-grid";
+import { BucketContributionChart } from "@/components/dashboard/bucket-contribution-chart";
 
 type DashboardPageProps = {
   searchParams?: Promise<{ month?: string }>;
@@ -101,6 +103,24 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     },
     { planned: 0, spent: 0, target: 0, planDelta: 0, planVsTarget: 0, targetDelta: 0 },
   );
+  const totalSpent = aggregatedBucketStats.spent;
+  const netResult = summary.income - totalSpent;
+  const savingsRatePercent = summary.totalSavingsRate * 100;
+  const burnRatePercent = summary.income > 0 ? Math.min((totalSpent / summary.income) * 100, 999) : 0;
+  const [summaryYear, summaryMonth] = summary.month.split("-").map(Number);
+  const daysInPeriod = new Date(summaryYear, summaryMonth, 0).getDate();
+  const elapsedDays =
+    summary.periodStatus === "future"
+      ? 0
+      : summary.periodStatus === "past"
+        ? daysInPeriod
+        : Math.max(daysInPeriod - summary.remainingDays, 1);
+  const avgDailySpend = elapsedDays > 0 ? totalSpent / elapsedDays : 0;
+  const remainingDailyBudget =
+    summary.periodStatus === "current" && summary.remainingDays > 0
+      ? Math.max((aggregatedBucketStats.planned - totalSpent) / summary.remainingDays, 0)
+      : 0;
+  const availableCash = summary.income - aggregatedBucketStats.planned;
 
   return (
     <div className="flex flex-col gap-8">
@@ -114,6 +134,20 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </p>
         <MonthSwitcher month={selectedMonth} />
       </header>
+
+      <KpiGrid
+        income={summary.income}
+        planned={aggregatedBucketStats.planned}
+        netResult={netResult}
+        availableCash={availableCash}
+        savingsRate={savingsRatePercent}
+        burnRate={burnRatePercent}
+        avgDailySpend={avgDailySpend}
+        remainingDailyBudget={remainingDailyBudget}
+        remainingDays={summary.remainingDays}
+        periodStatus={summary.periodStatus}
+        spent={totalSpent}
+      />
 
       <section className="grid gap-4 md:grid-cols-3">
         <div className="md:col-span-3">
@@ -183,6 +217,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           );
         })}
       </section>
+
+      <BucketContributionChart buckets={summary.buckets} mode={appUser.bucketMode} />
 
       <section className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
         <YearlyChart data={yearlyOverview.months} />

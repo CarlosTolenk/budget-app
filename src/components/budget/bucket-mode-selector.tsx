@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { updateBucketModeAction } from "@/app/actions/user-bucket-actions";
 import { BucketMode } from "@/domain/users/user";
@@ -155,9 +156,13 @@ function PresetMappingModal({
   onConfirm: () => void;
   isSubmitting: boolean;
 }) {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
   const allAssigned = customBuckets.every((bucket) => Boolean(mapping[bucket.id]));
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4">
       <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-slate-900/90 p-6 text-sm shadow-2xl" role="dialog" aria-modal="true">
         <p className="text-base font-semibold text-white">Volver al modo 50/30/20</p>
@@ -202,6 +207,7 @@ function PresetMappingModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

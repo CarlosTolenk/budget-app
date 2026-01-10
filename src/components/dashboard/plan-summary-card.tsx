@@ -43,17 +43,18 @@ export function PlanSummaryCard({
   const [hoveredSegment, setHoveredSegment] = useState<string | null>(null);
   const planRemaining = Math.max(planDelta, 0);
   const planOver = Math.max(-planDelta, 0);
-  const unassigned = Math.max(planVsTarget, 0);
+  const showTarget = bucketMode === "PRESET" && target > 0;
+  const unassigned = showTarget ? Math.max(planVsTarget, 0) : 0;
   const overspend = Math.max(spent - planned, 0);
   const targetBalance = Math.max(targetDelta, 0);
   const targetShortfall = Math.max(-targetDelta, 0);
-  const clampedSpent = Math.max(Math.min(spent, target), 0);
+  const clampedSpent = Math.max(Math.min(spent, showTarget ? target : planned), 0);
   const executionRate = planned > 0 ? Math.min((spent / planned) * 100, 999) : 0;
-  const planCoverageRate = target > 0 ? Math.min((planned / target) * 100, 999) : 0;
+  const planCoverageRate = showTarget ? Math.min((planned / target) * 100, 999) : 0;
   const baseEntries = [
     { key: "spent", value: clampedSpent, ...SEGMENT_META.spent },
     { key: "planRemaining", value: planRemaining, ...SEGMENT_META.planRemaining },
-    { key: "unassigned", value: unassigned, ...SEGMENT_META.unassigned },
+    ...(showTarget ? [{ key: "unassigned", value: unassigned, ...SEGMENT_META.unassigned }] : []),
     { key: "overspend", value: overspend, ...SEGMENT_META.overspend },
   ];
   const segments = baseEntries.filter((segment) => segment.value > 0);
@@ -101,9 +102,11 @@ export function PlanSummaryCard({
               })}
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-sm text-slate-300">
-              <p className="text-xs uppercase tracking-wide">Avance de la meta</p>
+              <p className="text-xs uppercase tracking-wide">
+                {showTarget ? "Avance de la meta" : "Avance del plan"}
+              </p>
               <p className="text-2xl font-semibold text-white">
-                {target > 0 ? `${Math.min((spent / target) * 100, 999).toFixed(0)}%` : "0%"}
+                {(showTarget ? Math.min((spent / target) * 100, 999) : executionRate).toFixed(0)}%
               </p>
             </div>
             {hoveredInfo ? (
@@ -136,12 +139,12 @@ export function PlanSummaryCard({
             <p className="text-xs uppercase tracking-wide text-slate-400">Gasto ejecutado</p>
             <p className="text-xl font-semibold text-white">{formatCurrency(spent)}</p>
           </div>
-          <div>
-            <p className="text-xs uppercase tracking-wide text-slate-400">
-              {bucketMode === "CUSTOM" ? "Meta mensual" : "Meta 50/30/20"}
-            </p>
-            <p className="text-xl font-semibold text-white">{formatCurrency(target)}</p>
-          </div>
+          {showTarget ? (
+            <div>
+              <p className="text-xs uppercase tracking-wide text-slate-400">Meta 50/30/20</p>
+              <p className="text-xl font-semibold text-white">{formatCurrency(target)}</p>
+            </div>
+          ) : null}
           <div className="grid gap-3 sm:grid-cols-2">
             <Stat
               label="Ejecución del plan"
@@ -156,31 +159,43 @@ export function PlanSummaryCard({
                     : `Sobreplan ${formatCurrency(planOver)}`
               }
             />
-            <Stat
-              label="Plan cubierto vs meta"
-              value={planCoverageRate}
-              tone={planCoverageRate >= 100 ? "positive" : "info"}
-              format="percent"
-              note={planCoverageRate >= 100 ? "Tu plan cubre toda la meta." : `Sin asignar ${formatCurrency(unassigned)}`}
-            />
+            {showTarget ? (
+              <Stat
+                label="Plan cubierto vs meta"
+                value={planCoverageRate}
+                tone={planCoverageRate >= 100 ? "positive" : "info"}
+                format="percent"
+                note={planCoverageRate >= 100 ? "Tu plan cubre toda la meta." : `Sin asignar ${formatCurrency(unassigned)}`}
+              />
+            ) : (
+              <Stat
+                label="Saldo disponible"
+                value={planRemaining}
+                tone="positive"
+                note={planRemaining > 0 ? "Puedes seguir gastando dentro del plan." : "Revisa tus categorías para ajustar."}
+              />
+            )}
             <Stat
               label="Brecha contra plan"
               value={planDelta}
               tone={planDelta >= 0 ? "positive" : "negative"}
               note={planDelta >= 0 ? "Aún tienes margen." : `Sobreplan ${formatCurrency(Math.abs(planDelta))}`}
             />
-            <Stat
-              label="Brecha contra meta"
-              value={targetDelta}
-              tone={targetDelta >= 0 ? "positive" : "negative"}
-              note={
-                targetDelta >= 0 ? `Restan ${formatCurrency(targetBalance)} para la meta.` : `Meta excedida ${formatCurrency(targetShortfall)}`
-              }
-            />
+            {showTarget ? (
+              <Stat
+                label="Brecha contra meta"
+                value={targetDelta}
+                tone={targetDelta >= 0 ? "positive" : "negative"}
+                note={
+                  targetDelta >= 0
+                    ? `Restan ${formatCurrency(targetBalance)} para la meta.`
+                    : `Meta excedida ${formatCurrency(targetShortfall)}`
+                }
+              />
+            ) : null}
           </div>
           <p className="text-xs text-slate-400">
-            El “Exceso del plan” aparece cuando el gasto ejecutado supera lo que habías planificado para este mes. Mientras siga en
-            0, vas dentro del plan.
+            El “Exceso del plan” aparece cuando el gasto ejecutado supera lo que habías planificado para este mes. Mientras siga en 0, vas dentro del plan.
           </p>
         </div>
       </div>
