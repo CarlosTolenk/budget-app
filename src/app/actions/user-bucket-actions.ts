@@ -6,6 +6,8 @@ import { ActionState } from "@/app/actions/action-state";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { serverContainer } from "@/infrastructure/config/server-container";
 import { BucketMode } from "@/domain/users/user";
+import { presetBucketOrder } from "@/domain/user-buckets/preset-buckets";
+import { UserBucket } from "@/domain/user-buckets/user-bucket";
 
 const nameSchema = z
   .string()
@@ -33,12 +35,14 @@ export async function updateBucketModeAction(mode: BucketMode): Promise<void> {
   if (appUser.bucketMode === mode) {
     return;
   }
-  const { userRepository, userBucketRepository } = serverContainer();
+  const container = serverContainer();
+  const { userRepository, userBucketRepository } = container;
   if (mode === "CUSTOM") {
     await userBucketRepository.markAllAsCustom(appUser.id);
   } else {
     await userBucketRepository.ensurePresetBuckets(appUser.id);
     await userBucketRepository.activatePresetBuckets(appUser.id);
+    await reassignCustomDataToPreset(appUser.id, container);
   }
   await userRepository.update(appUser.id, { bucketMode: mode });
   revalidateBudgetViews();
@@ -138,4 +142,99 @@ export async function reorderUserBucketsAction(orderedIds: string[]): Promise<vo
   const { userBucketRepository } = serverContainer();
   await userBucketRepository.reorder(appUser.id, orderedIds);
   revalidateBudgetViews();
+}
+
+const deleteSchema = z.object({
+  bucketId: z.string().min(1),
+  targetBucketId: z.string().min(1),
+});
+
+export async function deleteUserBucketAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const result = deleteSchema.safeParse({
+    bucketId: formData.get("bucketId"),
+    targetBucketId: formData.get("targetBucketId"),
+  });
+  if (!result.success) {
+    return { status: "error", message: "Selecciona un bucket válido" };
+  }
+  try {
+    const { appUser } = await requireAuth();
+    if (appUser.bucketMode !== "CUSTOM") {
+      return { status: "error", message: "Debes activar el modo personalizado para eliminar buckets" };
+    }
+    const { userBucketRepository } = serverContainer();
+    await userBucketRepository.deleteCustomBucket(appUser.id, result.data.bucketId, result.data.targetBucketId);
+    revalidateBudgetViews();
+    return { status: "success", message: "Bucket eliminado" };
+  } catch (error) {
+    console.error(error);
+    return { status: "error", message: (error as Error).message };
+  }
+}
+
+async function reassignCustomDataToPreset(
+  userId: string,
+  container: ReturnType<typeof serverContainer>,
+): Promise<void> {
+  const { userBucketRepository } = container;
+  const buckets = await userBucketRepository.listByUserId(userId);
+  const presetBuckets = presetBucketOrder
+    .map((key) => buckets.find((bucket) => bucket.mode === "PRESET" && bucket.presetKey === key))
+    .filter((bucket): bucket is UserBucket => Boolean(bucket));
+  const customBuckets = buckets.filter((bucket) => bucket.mode === "CUSTOM").sort((a, b) => a.sortOrder - b.sortOrder);
+  if (!presetBuckets.length || !customBuckets.length) {
+    return;
+  }
+
+  const reassignmentMap = new Map<string, string>();
+  customBuckets.forEach((bucket, index) => {
+    const target = presetBuckets[index % presetBuckets.length];
+    reassignmentMap.set(bucket.id, target.id);
+  });
+
+  await Promise.all([
+    reassignCategories(userId, reassignmentMap, container),
+    reassignRules(userId, reassignmentMap, container),
+  ]);
+}
+
+async function reassignCategories(
+  userId: string,
+  map: Map<string, string>,
+  container: ReturnType<typeof serverContainer>,
+): Promise<void> {
+  const categories = await container.categoryRepository.listAll(userId);
+  const updates = categories
+    .filter((category) => map.has(category.userBucketId))
+    .map((category) =>
+      container.categoryRepository.update({
+        id: category.id,
+        userId,
+        name: category.name,
+        userBucketId: map.get(category.userBucketId)!,
+        idealMonthlyAmount: category.idealMonthlyAmount ?? 0,
+      }),
+    );
+  await Promise.all(updates);
+}
+
+async function reassignRules(
+  userId: string,
+  map: Map<string, string>,
+  container: ReturnType<typeof serverContainer>,
+): Promise<void> {
+  const rules = await container.ruleRepository.listAll(userId);
+  const updates = rules
+    .filter((rule) => map.has(rule.userBucketId))
+    .map((rule) =>
+      container.ruleRepository.update({
+        id: rule.id,
+        userId,
+        pattern: rule.pattern,
+        priority: rule.priority,
+        categoryId: rule.categoryId,
+        userBucketId: map.get(rule.userBucketId)!,
+      }),
+    );
+  await Promise.all(updates);
 }

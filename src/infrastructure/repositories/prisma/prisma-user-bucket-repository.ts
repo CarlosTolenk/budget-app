@@ -84,7 +84,7 @@ export class PrismaUserBucketRepository implements UserBucketRepository {
   async markAllAsCustom(userId: string): Promise<void> {
     await prisma.userBucket.updateMany({
       where: { userId },
-      data: { mode: "CUSTOM" },
+      data: { mode: "CUSTOM", presetKey: null },
     });
   }
 
@@ -178,6 +178,36 @@ export class PrismaUserBucketRepository implements UserBucketRepository {
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     });
     return refreshed.map((record) => this.map(record));
+  }
+
+  async deleteCustomBucket(userId: string, bucketId: string, targetBucketId: string): Promise<void> {
+    await prisma.$transaction(async (tx) => {
+      const bucket = await tx.userBucket.findFirst({ where: { id: bucketId, userId } });
+      if (!bucket) {
+        throw new Error("Bucket no encontrado");
+      }
+      if (bucket.mode !== "CUSTOM") {
+        throw new Error("Solo puedes eliminar buckets personalizados");
+      }
+      if (bucketId === targetBucketId) {
+        throw new Error("Selecciona un bucket diferente para mover la información");
+      }
+      const target = await tx.userBucket.findFirst({ where: { id: targetBucketId, userId } });
+      if (!target || target.mode !== "CUSTOM") {
+        throw new Error("Bucket destino inválido");
+      }
+
+      const tablesToUpdate = [
+        tx.category.updateMany({ where: { userId, userBucketId: bucketId }, data: { userBucketId: targetBucketId } }),
+        tx.rule.updateMany({ where: { userId, userBucketId: bucketId }, data: { userBucketId: targetBucketId } }),
+        tx.transaction.updateMany({ where: { userId, userBucketId: bucketId }, data: { userBucketId: targetBucketId } }),
+        tx.transactionDraft.updateMany({ where: { userId, userBucketId: bucketId }, data: { userBucketId: targetBucketId } }),
+        tx.scheduledTransaction.updateMany({ where: { userId, userBucketId: bucketId }, data: { userBucketId: targetBucketId } }),
+        tx.budgetBucket.updateMany({ where: { userBucketId: bucketId }, data: { userBucketId: targetBucketId } }),
+      ];
+      await Promise.all(tablesToUpdate);
+      await tx.userBucket.delete({ where: { id: bucketId } });
+    });
   }
 
   private map(record: {

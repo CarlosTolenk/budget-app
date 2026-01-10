@@ -1,7 +1,15 @@
 import { randomUUID } from "crypto";
 import { UserBucketRepository } from "@/domain/repositories/user-bucket-repository";
 import { PresetBucketKey, UserBucket } from "@/domain/user-buckets/user-bucket";
-import { memoryBuckets } from "@/infrastructure/repositories/memory/memory-data";
+import {
+  memoryBuckets,
+  memoryCategories,
+  memoryRules,
+  memoryTransactions,
+  memoryScheduledTransactions,
+  memoryDrafts,
+  memoryBudget,
+} from "@/infrastructure/repositories/memory/memory-data";
 import { presetBucketCopy, presetBucketOrder } from "@/domain/user-buckets/preset-buckets";
 
 export class MemoryUserBucketRepository implements UserBucketRepository {
@@ -74,6 +82,7 @@ export class MemoryUserBucketRepository implements UserBucketRepository {
         ? {
             ...bucket,
             mode: "CUSTOM",
+            presetKey: null,
             updatedAt: new Date(),
           }
         : bucket,
@@ -146,5 +155,54 @@ export class MemoryUserBucketRepository implements UserBucketRepository {
     const otherBuckets = this.buckets.filter((bucket) => bucket.userId !== userId);
     this.buckets = [...otherBuckets, ...reordered];
     return reordered;
+  }
+
+  async deleteCustomBucket(userId: string, bucketId: string, targetBucketId: string): Promise<void> {
+    const bucket = this.buckets.find((entry) => entry.id === bucketId && entry.userId === userId);
+    if (!bucket) {
+      throw new Error("Bucket no encontrado");
+    }
+    if (bucket.mode !== "CUSTOM") {
+      throw new Error("Solo puedes eliminar buckets personalizados");
+    }
+    if (bucketId === targetBucketId) {
+      throw new Error("Selecciona un bucket diferente para mover la información");
+    }
+    const target = this.buckets.find((entry) => entry.id === targetBucketId && entry.userId === userId);
+    if (!target || target.mode !== "CUSTOM") {
+      throw new Error("Bucket destino inválido");
+    }
+
+    const targetBucket = target;
+
+    const reassignCollection = (items: Array<{ userBucketId: string; userBucket?: UserBucket; bucket?: string | null }>) => {
+      for (const item of items) {
+        if (item.userBucketId === bucketId) {
+          item.userBucketId = targetBucketId;
+          if (item.userBucket) {
+            item.userBucket = targetBucket;
+          }
+          if (Object.prototype.hasOwnProperty.call(item, "bucket")) {
+            (item as { bucket?: string | null }).bucket = targetBucket.presetKey ?? null;
+          }
+        }
+      }
+    };
+
+    reassignCollection(memoryCategories);
+    reassignCollection(memoryRules);
+    reassignCollection(memoryTransactions);
+    reassignCollection(memoryScheduledTransactions);
+    reassignCollection(memoryDrafts);
+    if (memoryBudget.buckets) {
+      for (const bucketRow of memoryBudget.buckets) {
+        if (bucketRow.userBucketId === bucketId) {
+          bucketRow.userBucketId = targetBucketId;
+          bucketRow.userBucket = targetBucket;
+        }
+      }
+    }
+
+    this.buckets = this.buckets.filter((entry) => entry.id !== bucketId);
   }
 }

@@ -6,6 +6,7 @@ import {
   renameUserBucketAction,
   updateBucketColorAction,
   reorderUserBucketsAction,
+  deleteUserBucketAction,
 } from "@/app/actions/user-bucket-actions";
 import { ActionState, initialActionState } from "@/app/actions/action-state";
 import { BucketMode } from "@/domain/users/user";
@@ -39,7 +40,10 @@ export function UserBucketsGrid({
   const [renameState, renameAction] = useActionState(renameUserBucketAction, initialActionState);
   const [colorState, colorAction] = useActionState(updateBucketColorAction, initialActionState);
   const [bucketToColor, setBucketToColor] = useState<UserBucket | null>(null);
+  const [bucketToDelete, setBucketToDelete] = useState<UserBucket | null>(null);
+  const [deleteState, deleteAction] = useActionState(deleteUserBucketAction, initialActionState);
   const [isReordering, startReorderTransition] = useTransition();
+  const [expandedBucketId, setExpandedBucketId] = useState<string | null>(null);
 
   useEffect(() => {
     if (createState.status === "success") {
@@ -62,6 +66,13 @@ export function UserBucketsGrid({
     }
   }, [colorState]);
 
+  useEffect(() => {
+    if (deleteState.status === "success") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setBucketToDelete(null);
+    }
+  }, [deleteState]);
+
   const sortedBuckets = useMemo(() => {
     return [...buckets].sort((a, b) => a.sortOrder - b.sortOrder || a.createdAt.getTime() - b.createdAt.getTime());
   }, [buckets]);
@@ -83,6 +94,8 @@ export function UserBucketsGrid({
   };
 
   const colorOptions = ["#e11d48", "#db2777", "#c026d3", "#7c3aed", "#2563eb", "#0ea5e9", "#14b8a6", "#10b981", "#22c55e", "#84cc16"];
+  const customBuckets = sortedBuckets.filter((bucket) => bucket.mode === "CUSTOM");
+  const canDeleteBuckets = customBuckets.length > 1;
 
   return (
     <section className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
@@ -129,7 +142,7 @@ export function UserBucketsGrid({
             const showPresetDetails = bucketMode === "PRESET" && Boolean(bucket.presetKey);
             const bucketLabel = showPresetDetails && bucket.presetKey ? presetBucketCopy[bucket.presetKey].label : bucket.name;
             const bucketDescription =
-              showPresetDetails && bucket.presetKey ? presetBucketCopy[bucket.presetKey].description : "Bucket personalizado";
+              showPresetDetails && bucket.presetKey ? presetBucketCopy[bucket.presetKey].description : null;
             const planned = summary?.planned ?? categories.reduce((sum, category) => sum + (category.idealMonthlyAmount ?? 0), 0);
             const spent = summary?.spent ?? 0;
             const target = summary?.target ?? 0;
@@ -141,33 +154,41 @@ export function UserBucketsGrid({
               <article key={bucket.id} className="flex h-full flex-col rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
                       {bucket.color ? (
                         <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: bucket.color }} aria-hidden />
                       ) : null}
-                    <p className="text-sm uppercase tracking-wide text-slate-400">{bucketDescription}</p>
-                    <h3 className="text-lg font-semibold text-white">{bucketLabel}</h3>
+                      {bucketDescription ? <span>{bucketDescription}</span> : bucketMode === "CUSTOM" ? <span>Personalizado</span> : null}
                     </div>
+                    <h3 className="text-lg font-semibold text-white">{bucketLabel}</h3>
                   </div>
                   {bucketMode === "CUSTOM" ? (
-                    <div className="flex flex-wrap justify-end gap-1 text-xs text-white">
-                      <IconButton
-                        label="Subir"
-                        icon="↑"
-                        onClick={() => handleReorder(bucket.id, "up")}
-                        disabled={isReordering || sortedBuckets[0].id === bucket.id}
-                      />
-                      <IconButton
-                        label="Bajar"
-                        icon="↓"
-                        onClick={() => handleReorder(bucket.id, "down")}
-                        disabled={isReordering || sortedBuckets[sortedBuckets.length - 1].id === bucket.id}
-                      />
-                      <IconButton label="Renombrar" icon="✎" onClick={() => setBucketToRename(bucket)} />
-                      <IconButton label="Color" icon="🎨" onClick={() => setBucketToColor(bucket)} />
-                    </div>
+                    <IconButton
+                      label={expandedBucketId === bucket.id ? "Cerrar acciones" : "Mostrar acciones"}
+                      icon={expandedBucketId === bucket.id ? "✕" : "⋯"}
+                      onClick={() => setExpandedBucketId((prev) => (prev === bucket.id ? null : bucket.id))}
+                    />
                   ) : null}
                 </div>
+                {bucketMode === "CUSTOM" && expandedBucketId === bucket.id ? (
+                  <div className="mt-2 flex flex-wrap gap-1 text-xs text-white">
+                    <IconButton
+                      label="Subir"
+                      icon="↑"
+                      onClick={() => handleReorder(bucket.id, "up")}
+                      disabled={isReordering || sortedBuckets[0].id === bucket.id}
+                    />
+                    <IconButton
+                      label="Bajar"
+                      icon="↓"
+                      onClick={() => handleReorder(bucket.id, "down")}
+                      disabled={isReordering || sortedBuckets[sortedBuckets.length - 1].id === bucket.id}
+                    />
+                    <IconButton label="Renombrar" icon="✎" onClick={() => setBucketToRename(bucket)} />
+                    <IconButton label="Color" icon="🎨" onClick={() => setBucketToColor(bucket)} />
+                    <IconButton label="Eliminar" icon="🗑" onClick={() => setBucketToDelete(bucket)} disabled={!canDeleteBuckets} />
+                  </div>
+                ) : null}
                 <div className="mt-3 text-sm text-slate-300">
                   <p>
                     {bucketMode === "PRESET" ? "Plan ideal" : "Planificado"}{" "}
@@ -250,6 +271,16 @@ export function UserBucketsGrid({
           state={colorState}
           onClose={() => setBucketToColor(null)}
           colorOptions={colorOptions}
+        />
+      ) : null}
+
+      {bucketToDelete ? (
+        <DeleteBucketModal
+          bucket={bucketToDelete}
+          action={deleteAction}
+          state={deleteState}
+          onClose={() => setBucketToDelete(null)}
+          options={sortedBuckets.filter((candidate) => candidate.mode === "CUSTOM" && candidate.id !== bucketToDelete.id)}
         />
       ) : null}
     </section>
@@ -360,6 +391,64 @@ function ColorPickerModal({
             >
               Cerrar
             </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function DeleteBucketModal({
+  bucket,
+  action,
+  state,
+  options,
+  onClose,
+}: {
+  bucket: UserBucket;
+  action: (payload: FormData) => void;
+  state: ActionState;
+  options: UserBucket[];
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4">
+      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900/90 p-6 text-sm shadow-2xl" role="dialog" aria-modal="true">
+        <p className="text-base font-semibold text-white">Eliminar {bucket.name}</p>
+        <p className="mt-1 text-slate-300">
+          Antes de eliminarlo necesitas mover sus categorías y reglas a otro bucket personalizado. Esta acción no se puede deshacer.
+        </p>
+        <form action={action} className="mt-4 space-y-4">
+          <input type="hidden" name="bucketId" value={bucket.id} />
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-slate-400">
+            Bucket destino
+            <select
+              name="targetBucketId"
+              defaultValue={options[0]?.id}
+              className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
+              required
+              disabled={!options.length}
+            >
+              {options.map((candidate) => (
+                <option key={candidate.id} value={candidate.id} className="text-slate-900">
+                  {candidate.name}
+                </option>
+              ))}
+            </select>
+            {!options.length ? <span className="text-[11px] text-rose-300">Necesitas otro bucket para poder reasignar.</span> : null}
+          </label>
+          {state.message ? (
+            <p className={`text-xs ${state.status === "success" ? "text-emerald-300" : "text-rose-300"}`}>{state.message}</p>
+          ) : null}
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold text-white transition hover:border-white/40"
+            >
+              Cancelar
+            </button>
+            <ModalConfirmButton label="Eliminar" pendingLabel="Eliminando..." variant="danger" disabled={!options.length} />
           </div>
         </form>
       </div>
