@@ -314,10 +314,10 @@ export function UserBucketsGrid({
                 key={bucket.id}
                 className={`flex h-full flex-col rounded-2xl border ${dragOverBucketId === bucket.id ? "border-emerald-300/60" : "border-white/10"} bg-white/5 p-4`}
                 draggable={bucketMode === "CUSTOM"}
-                onDragStart={(event) => handleDragStart(bucket.id, event)}
-                onDragOver={(event) => handleDragOver(bucket.id, event)}
+                onDragStart={(event: DragEvent<HTMLDivElement>) => handleDragStart(bucket.id, event)}
+                onDragOver={(event: DragEvent<HTMLDivElement>) => handleDragOver(bucket.id, event)}
                 onDragLeave={() => handleDragLeave(bucket.id)}
-                onDrop={(event) => handleDrop(bucket.id, event)}
+                onDrop={(event: DragEvent<HTMLDivElement>) => handleDrop(bucket.id, event)}
                 onDragEnd={handleDragEnd}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -648,7 +648,12 @@ function DeleteBucketModal({
             >
               Cancelar
             </button>
-            <ModalConfirmButton label="Eliminar" pendingLabel="Eliminando..." variant="danger" disabled={!options.length} />
+            <ModalConfirmButton
+              label="Eliminar"
+              pendingLabel="Eliminando..."
+              variant="danger"
+              disabled={!options.length}
+            />
           </div>
         </form>
       </div>
