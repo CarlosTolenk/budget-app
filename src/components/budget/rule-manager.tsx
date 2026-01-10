@@ -56,7 +56,10 @@ export function RuleManager({ rules, categories, userBuckets, bucketMode }: Rule
     [userBuckets, bucketMode],
   );
   const selectBuckets = availableBuckets.length ? availableBuckets : userBuckets;
-  const bucketNameMap = useMemo(() => new Map(userBuckets.map((bucket) => [bucket.id, bucket.name])), [userBuckets]);
+  const bucketMetaMap = useMemo(
+    () => new Map(userBuckets.map((bucket) => [bucket.id, { name: bucket.name, color: bucket.color }])),
+    [userBuckets],
+  );
   const deriveBucketId = (categoryId: string): string => {
     const category = categories.find((entry) => entry.id === categoryId);
     if (category) {
@@ -160,7 +163,16 @@ export function RuleManager({ rules, categories, userBuckets, bucketMode }: Rule
                     <p className="font-mono text-sm text-emerald-200">/{rule.pattern}/</p>
                     <p className="text-xs uppercase tracking-wide text-slate-400">Prioridad #{rule.priority}</p>
                     <p className="text-sm font-semibold text-white">{categoryLabel}</p>
-                    <p className="text-xs text-slate-400">{bucketNameMap.get(rule.userBucketId) ?? "Sin bucket"}</p>
+                    <p className="flex items-center gap-2 text-xs text-slate-400">
+                      {bucketMetaMap.get(rule.userBucketId)?.color ? (
+                        <span
+                          className="inline-block h-2 w-2 rounded-full"
+                          style={{ backgroundColor: bucketMetaMap.get(rule.userBucketId)?.color ?? undefined }}
+                          aria-hidden
+                        />
+                      ) : null}
+                      {bucketMetaMap.get(rule.userBucketId)?.name ?? "Sin bucket"}
+                    </p>
                   </div>
                   <div className="flex gap-2">
                     <button

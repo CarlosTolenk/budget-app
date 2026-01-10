@@ -7,7 +7,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { serverContainer } from "@/infrastructure/config/server-container";
 import { BucketMode } from "@/domain/users/user";
 import { presetBucketOrder } from "@/domain/user-buckets/preset-buckets";
-import { UserBucket } from "@/domain/user-buckets/user-bucket";
+import { MAX_CUSTOM_BUCKETS, UserBucket } from "@/domain/user-buckets/user-bucket";
 
 const nameSchema = z
   .string()
@@ -64,7 +64,7 @@ export async function createUserBucketAction(_prev: ActionState, formData: FormD
     const { userBucketRepository } = serverContainer();
     const buckets = await userBucketRepository.listByUserId(appUser.id);
     const customBuckets = buckets.filter((bucket) => bucket.mode === "CUSTOM");
-    if (customBuckets.length >= 4) {
+    if (customBuckets.length >= MAX_CUSTOM_BUCKETS) {
       return { status: "error", message: "Alcanzaste el máximo de buckets personalizados" };
     }
     await userBucketRepository.createCustom(appUser.id, result.data.name);

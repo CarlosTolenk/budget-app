@@ -24,7 +24,7 @@ const modeOptions: Array<{
   {
     value: "CUSTOM",
     title: "Buckets personalizados",
-    description: "Nombra hasta 4 renglones propios para controlar tus categorías sin porcentajes fijos.",
+    description: "Nombra hasta 6 renglones propios para controlar tus categorías sin porcentajes fijos.",
     tooltip: "Define tus propios renglones y asigna categorías libremente.",
   },
 ];

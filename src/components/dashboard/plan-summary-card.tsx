@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { formatCurrency } from "@/lib/format";
+import type { BucketMode } from "@/domain/users/user";
 
 interface PlanSummaryCardProps {
   planned: number;
@@ -10,6 +11,7 @@ interface PlanSummaryCardProps {
   planDelta: number;
   planVsTarget: number;
   targetDelta: number;
+  bucketMode?: BucketMode;
 }
 
 const SEGMENT_META = {
@@ -29,7 +31,15 @@ const SEGMENT_META = {
   },
 } as const;
 
-export function PlanSummaryCard({ planned, spent, target, planDelta, planVsTarget, targetDelta }: PlanSummaryCardProps) {
+export function PlanSummaryCard({
+  planned,
+  spent,
+  target,
+  planDelta,
+  planVsTarget,
+  targetDelta,
+  bucketMode = "PRESET",
+}: PlanSummaryCardProps) {
   const [hoveredSegment, setHoveredSegment] = useState<string | null>(null);
   const planRemaining = Math.max(planDelta, 0);
   const planOver = Math.max(-planDelta, 0);
@@ -127,7 +137,9 @@ export function PlanSummaryCard({ planned, spent, target, planDelta, planVsTarge
             <p className="text-xl font-semibold text-white">{formatCurrency(spent)}</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-wide text-slate-400">Meta 50/30/20</p>
+            <p className="text-xs uppercase tracking-wide text-slate-400">
+              {bucketMode === "CUSTOM" ? "Meta mensual" : "Meta 50/30/20"}
+            </p>
             <p className="text-xl font-semibold text-white">{formatCurrency(target)}</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">

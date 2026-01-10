@@ -2,6 +2,8 @@ import { BucketMode } from "@/domain/users/user";
 
 export type PresetBucketKey = "NEEDS" | "WANTS" | "SAVINGS";
 
+export const MAX_CUSTOM_BUCKETS = 6;
+
 export interface UserBucket {
   id: string;
   userId: string;

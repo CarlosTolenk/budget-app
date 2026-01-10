@@ -46,6 +46,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       : summary.periodStatus === "past"
         ? "Mes finalizado"
         : "Mes programado";
+  const isCustomMode = appUser.bucketMode === "CUSTOM";
 
   const spendingByCategory = transactions.reduce<Record<string, number>>((acc, transaction) => {
     if (transaction.amount >= 0) {
@@ -103,7 +104,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-2">
         <p className="text-sm uppercase tracking-wide text-slate-400">Personal Budget · {formatMonthLabel(summary.month)}</p>
-        <h1 className="text-3xl font-semibold">Regla 50/30/20 en acción</h1>
+        <h1 className="text-3xl font-semibold">
+          {isCustomMode ? "Tus buckets personalizados" : "Regla 50/30/20 en acción"}
+        </h1>
         <p className="text-base text-slate-300">
           Ingresos declarados {formatCurrency(summary.income)} · {remainingDescription}
         </p>
@@ -119,6 +122,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             planDelta={aggregatedBucketStats.planDelta}
             planVsTarget={aggregatedBucketStats.planVsTarget}
             targetDelta={aggregatedBucketStats.targetDelta}
+            bucketMode={appUser.bucketMode}
           />
         </div>
         {summary.buckets.map((bucket) => {
@@ -140,7 +144,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               <p className="text-sm text-slate-300">Real gastado</p>
               <div className="mt-2 text-xs text-slate-400">
                 <p>Plan ideal {formatCurrency(bucket.planned)}</p>
-                <p>Meta 50/30/20 {formatCurrency(bucket.target)}</p>
+                <p>{isCustomMode ? "Meta mensual" : "Meta 50/30/20"} {formatCurrency(bucket.target)}</p>
               </div>
               <div className="mt-4 h-2 rounded-full bg-white/10">
                 <div className="h-2 rounded-full bg-emerald-400 transition-all" style={{ width: `${progress * 100}%` }} />

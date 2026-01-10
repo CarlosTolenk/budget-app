@@ -11,6 +11,7 @@ import { RuleManager } from "@/components/budget/rule-manager";
 import { BucketModeSelector } from "@/components/budget/bucket-mode-selector";
 import { UserBucketsGrid } from "@/components/budget/user-buckets-grid";
 import { env } from "@/infrastructure/config/env";
+import { MAX_CUSTOM_BUCKETS } from "@/domain/user-buckets/user-bucket";
 
 type BudgetPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -52,7 +53,7 @@ export default async function BudgetPage({ searchParams }: BudgetPageProps) {
   }, {});
   const activeBuckets = userBuckets.filter((bucket) => bucket.mode === appUser.bucketMode);
   const customBuckets = userBuckets.filter((bucket) => bucket.mode === "CUSTOM");
-  const remainingSlots = Math.max(0, 4 - customBuckets.length);
+  const remainingSlots = Math.max(0, MAX_CUSTOM_BUCKETS - customBuckets.length);
   const canAddMoreBuckets = appUser.bucketMode === "CUSTOM" && remainingSlots > 0;
 
   const totalIncome = incomes.reduce((sum, income) => sum + income.amount, 0);

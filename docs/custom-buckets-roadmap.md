@@ -1,11 +1,11 @@
 # Custom Buckets Roadmap
 
-Documento de trabajo para introducir buckets personalizables (hasta 4 por usuario) manteniendo el preset 50/30/20 como modo guiado opcional.
+Documento de trabajo para introducir buckets personalizables (hasta 6 por usuario) manteniendo el preset 50/30/20 como modo guiado opcional.
 
 ---
 
 ## 0. Objetivos y alcance
-- Permitir dos modos: `preset` (50/30/20 con metas sugeridas) y `custom` (hasta 4 buckets nombrados por el usuario, sin metas automáticas).
+- Permitir dos modos: `preset` (50/30/20 con metas sugeridas) y `custom` (hasta 6 buckets nombrados por el usuario, sin metas automáticas).
 - Mantener el historial existente; ningún gasto, categoría o regla se debe perder durante la migración.
 - Habilitar un flujo para cambiar de preset → custom y viceversa, sin requerir soporte manual.
 - Evitar sugerencias de metas en modo custom; los usuarios controlan solo el seguimiento por bucket.
@@ -17,7 +17,7 @@ Fuera de alcance: rediseño visual completo del dashboard o cambios a reportes h
 ## 1. Esquema de datos
 1. **Crear tabla `UserBucket`:**
    - Campos: `id (cuid)`, `userId`, `name`, `sortOrder (int)`, `color (string, opcional)`, `mode ("preset" | "custom")`, `presetKey ("NEEDS" | "WANTS" | "SAVINGS" | null)`, timestamps.
-   - Constraint: máximo 4 buckets `custom` por usuario. Para `preset`, se mantienen exactamente tres filas.
+   - Constraint: máximo 6 buckets `custom` por usuario. Para `preset`, se mantienen exactamente tres filas.
 2. **Actualizar entidades existentes:**
    - `Category`, `Transaction`, `TransactionDraft`, `ScheduledTransaction`, `Rule` deben referenciar `userBucketId` (FK) y eliminar el enum `Bucket`.
    - `Budget`: reemplazar campos `needsTarget|wantsTarget|savingsTarget` por tabla hija `BudgetBucket { id, budgetId, userBucketId, targetAmount }`. Mantener `income`.
@@ -42,7 +42,7 @@ Fuera de alcance: rediseño visual completo del dashboard o cambios a reportes h
 
 ## 3. Experiencia de usuario
 1. **Configuración de buckets:**
-   - Nueva sección en `/budget` (o `/settings/buckets`) para listar buckets activos, permitir renombrar, crear (hasta 4), ordenar y eliminar (con asistente para mover categorías antes de borrar).
+   - Nueva sección en `/budget` (o `/settings/buckets`) para listar buckets activos, permitir renombrar, crear (hasta 6), ordenar y eliminar (con asistente para mover categorías antes de borrar).
    - Mostrar modo actual (`preset` o `custom`) con CTA para cambiar. Cambiar a custom desbloquea edición.
 2. **Formularios existentes:**
    - `CategoryForm`, `TransactionForm`, `ScheduledTransactionForm`, `transactions-tabs`, `transaction-actions` deben recibir la lista de buckets desde server components/props y renderizar selects dinámicos.

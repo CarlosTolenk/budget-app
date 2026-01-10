@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
+import type { DragEvent } from "react";
 import {
   createUserBucketAction,
   renameUserBucketAction,
@@ -10,7 +11,7 @@ import {
 } from "@/app/actions/user-bucket-actions";
 import { ActionState, initialActionState } from "@/app/actions/action-state";
 import { BucketMode } from "@/domain/users/user";
-import { UserBucket } from "@/domain/user-buckets/user-bucket";
+import { MAX_CUSTOM_BUCKETS, UserBucket } from "@/domain/user-buckets/user-bucket";
 import { Category } from "@/domain/categories/category";
 import { BucketProgress } from "@/application/dtos/dashboard";
 import { formatCurrency, formatPercent } from "@/lib/format";
@@ -34,16 +35,25 @@ export function UserBucketsGrid({
   canAddMore,
   remainingSlots,
 }: UserBucketsGridProps) {
+  const [visibleBuckets, setVisibleBuckets] = useState(buckets);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [bucketToRename, setBucketToRename] = useState<UserBucket | null>(null);
   const [createState, createAction] = useActionState(createUserBucketAction, initialActionState);
   const [renameState, renameAction] = useActionState(renameUserBucketAction, initialActionState);
-  const [colorState, colorAction] = useActionState(updateBucketColorAction, initialActionState);
   const [bucketToColor, setBucketToColor] = useState<UserBucket | null>(null);
+  const [selectedColor, setSelectedColor] = useState<string>("");
+  const [colorFeedback, setColorFeedback] = useState<ActionState>(initialActionState);
+  const [colorPendingBucketId, setColorPendingBucketId] = useState<string | null>(null);
   const [bucketToDelete, setBucketToDelete] = useState<UserBucket | null>(null);
   const [deleteState, deleteAction] = useActionState(deleteUserBucketAction, initialActionState);
-  const [isReordering, startReorderTransition] = useTransition();
+  const [isReordering, setIsReordering] = useState(false);
   const [expandedBucketId, setExpandedBucketId] = useState<string | null>(null);
+  const [draggedBucketId, setDraggedBucketId] = useState<string | null>(null);
+  const [dragOverBucketId, setDragOverBucketId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setVisibleBuckets(buckets);
+  }, [buckets]);
 
   useEffect(() => {
     if (createState.status === "success") {
@@ -60,22 +70,39 @@ export function UserBucketsGrid({
   }, [renameState]);
 
   useEffect(() => {
-    if (colorState.status === "success") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setBucketToColor(null);
-    }
-  }, [colorState]);
-
-  useEffect(() => {
     if (deleteState.status === "success") {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setBucketToDelete(null);
     }
   }, [deleteState]);
 
+  useEffect(() => {
+    if (!bucketToColor) {
+      return;
+    }
+    const updatedBucket = visibleBuckets.find((candidate) => candidate.id === bucketToColor.id);
+    if (updatedBucket && updatedBucket !== bucketToColor) {
+      setBucketToColor(updatedBucket);
+    }
+  }, [visibleBuckets, bucketToColor]);
+
   const sortedBuckets = useMemo(() => {
-    return [...buckets].sort((a, b) => a.sortOrder - b.sortOrder || a.createdAt.getTime() - b.createdAt.getTime());
-  }, [buckets]);
+    return [...visibleBuckets].sort((a, b) => a.sortOrder - b.sortOrder || a.createdAt.getTime() - b.createdAt.getTime());
+  }, [visibleBuckets]);
+
+  const closeColorModal = () => {
+    setBucketToColor(null);
+    setColorFeedback(initialActionState);
+    setColorPendingBucketId(null);
+    setSelectedColor("");
+  };
+
+  const handleConfirmColor = () => {
+    if (!bucketToColor) {
+      return;
+    }
+    submitColorChange(bucketToColor, selectedColor);
+  };
 
   const handleReorder = (bucketId: string, direction: "up" | "down") => {
     const order = sortedBuckets.map((bucket) => bucket.id);
@@ -88,14 +115,146 @@ export function UserBucketsGrid({
       return;
     }
     [order[index], order[targetIndex]] = [order[targetIndex], order[index]];
-    startReorderTransition(() => {
-      void reorderUserBucketsAction(order);
-    });
+    submitReorder(order);
   };
 
   const colorOptions = ["#e11d48", "#db2777", "#c026d3", "#7c3aed", "#2563eb", "#0ea5e9", "#14b8a6", "#10b981", "#22c55e", "#84cc16"];
   const customBuckets = sortedBuckets.filter((bucket) => bucket.mode === "CUSTOM");
   const canDeleteBuckets = customBuckets.length > 1;
+  const applyLocalOrder = (order: string[], sourceBuckets: UserBucket[]): UserBucket[] => {
+    const bucketMap = new Map(sourceBuckets.map((bucket) => [bucket.id, bucket]));
+    const orderedBuckets: UserBucket[] = [];
+    order.forEach((id, index) => {
+      const bucket = bucketMap.get(id);
+      if (bucket) {
+        orderedBuckets.push({ ...bucket, sortOrder: index });
+        bucketMap.delete(id);
+      }
+    });
+    bucketMap.forEach((bucket) => {
+      orderedBuckets.push({ ...bucket, sortOrder: orderedBuckets.length });
+    });
+    return orderedBuckets;
+  };
+
+  const persistReorder = async (order: string[], rollbackState: UserBucket[]) => {
+    setIsReordering(true);
+    try {
+      await reorderUserBucketsAction(order);
+    } catch (error) {
+      console.error(error);
+      setVisibleBuckets(rollbackState.map((bucket) => ({ ...bucket })));
+      if (typeof window !== "undefined") {
+        window.alert("No se pudo guardar el nuevo orden. Intenta de nuevo.");
+      }
+    } finally {
+      setIsReordering(false);
+    }
+  };
+
+  const submitReorder = (order: string[]) => {
+    if (!Array.isArray(order) || order.length < 2) {
+      return;
+    }
+    const previousState = visibleBuckets.map((bucket) => ({ ...bucket }));
+    setVisibleBuckets((current) => applyLocalOrder(order, current));
+    void persistReorder(order, previousState);
+  };
+  const submitColorChange = (bucket: UserBucket, newColorValue: string) => {
+    const previousColor = visibleBuckets.find((candidate) => candidate.id === bucket.id)?.color ?? null;
+    const previousNormalized = previousColor ?? "";
+    const normalizedColor = newColorValue?.trim() ?? "";
+    if (normalizedColor === previousNormalized) {
+      closeColorModal();
+      return;
+    }
+    setColorPendingBucketId(bucket.id);
+    setColorFeedback(initialActionState);
+    setVisibleBuckets((current) =>
+      current.map((candidate) => (candidate.id === bucket.id ? { ...candidate, color: normalizedColor || null } : candidate)),
+    );
+    void (async () => {
+      try {
+        const formData = new FormData();
+        formData.append("bucketId", bucket.id);
+        formData.append("color", normalizedColor);
+        const result = await updateBucketColorAction(initialActionState, formData);
+        if (result.status === "error") {
+          setVisibleBuckets((current) =>
+            current.map((candidate) => (candidate.id === bucket.id ? { ...candidate, color: previousColor } : candidate)),
+          );
+          setColorFeedback(result);
+          if (typeof window !== "undefined") {
+            window.alert(result.message ?? "No se pudo actualizar el color");
+          }
+          return;
+        }
+        setColorFeedback(result);
+        closeColorModal();
+      } catch (error) {
+        console.error(error);
+        setVisibleBuckets((current) =>
+          current.map((candidate) => (candidate.id === bucket.id ? { ...candidate, color: previousColor } : candidate)),
+        );
+        const message = (error as Error).message ?? "No se pudo actualizar el color";
+        setColorFeedback({ status: "error", message });
+        if (typeof window !== "undefined") {
+          window.alert(message);
+        }
+      } finally {
+        setColorPendingBucketId(null);
+      }
+    })();
+  };
+
+  const handleDragStart = (bucketId: string, event: DragEvent<HTMLDivElement>) => {
+    if (bucketMode !== "CUSTOM") {
+      return;
+    }
+    event.dataTransfer.setData("text/plain", bucketId);
+    event.dataTransfer.effectAllowed = "move";
+    setDraggedBucketId(bucketId);
+    setDragOverBucketId(null);
+  };
+
+  const handleDragOver = (bucketId: string, event: DragEvent<HTMLDivElement>) => {
+    if (bucketMode !== "CUSTOM" || !draggedBucketId || draggedBucketId === bucketId) {
+      return;
+    }
+    event.preventDefault();
+    setDragOverBucketId(bucketId);
+  };
+
+  const handleDragLeave = (bucketId: string) => {
+    if (dragOverBucketId === bucketId) {
+      setDragOverBucketId(null);
+    }
+  };
+
+  const handleDrop = (bucketId: string, event: DragEvent<HTMLDivElement>) => {
+    if (bucketMode !== "CUSTOM" || !draggedBucketId || draggedBucketId === bucketId) {
+      return;
+    }
+    event.preventDefault();
+    const order = sortedBuckets.map((bucket) => bucket.id);
+    const fromIndex = order.indexOf(draggedBucketId);
+    const toIndex = order.indexOf(bucketId);
+    if (fromIndex === -1 || toIndex === -1) {
+      setDraggedBucketId(null);
+      setDragOverBucketId(null);
+      return;
+    }
+    order.splice(fromIndex, 1);
+    order.splice(toIndex, 0, draggedBucketId);
+    submitReorder(order);
+    setDraggedBucketId(null);
+    setDragOverBucketId(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedBucketId(null);
+    setDragOverBucketId(null);
+  };
 
   return (
     <section className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
@@ -125,7 +284,7 @@ export function UserBucketsGrid({
         <p className="mt-2 text-xs text-slate-400">
           {canAddMore
             ? `Puedes agregar ${remainingSlots} bucket${remainingSlots === 1 ? "" : "s"} adicionales.`
-            : "Ya utilizas el máximo de 4 buckets personalizados."}
+            : `Ya utilizas el máximo de ${MAX_CUSTOM_BUCKETS} buckets personalizados.`}
         </p>
       ) : null}
       {sortedBuckets.length === 0 ? (
@@ -151,7 +310,16 @@ export function UserBucketsGrid({
             const showTarget = bucketMode === "PRESET" && Boolean(target);
 
             return (
-              <article key={bucket.id} className="flex h-full flex-col rounded-2xl border border-white/10 bg-white/5 p-4">
+              <article
+                key={bucket.id}
+                className={`flex h-full flex-col rounded-2xl border ${dragOverBucketId === bucket.id ? "border-emerald-300/60" : "border-white/10"} bg-white/5 p-4`}
+                draggable={bucketMode === "CUSTOM"}
+                onDragStart={(event) => handleDragStart(bucket.id, event)}
+                onDragOver={(event) => handleDragOver(bucket.id, event)}
+                onDragLeave={() => handleDragLeave(bucket.id)}
+                onDrop={(event) => handleDrop(bucket.id, event)}
+                onDragEnd={handleDragEnd}
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
@@ -185,7 +353,15 @@ export function UserBucketsGrid({
                       disabled={isReordering || sortedBuckets[sortedBuckets.length - 1].id === bucket.id}
                     />
                     <IconButton label="Renombrar" icon="✎" onClick={() => setBucketToRename(bucket)} />
-                    <IconButton label="Color" icon="🎨" onClick={() => setBucketToColor(bucket)} />
+                    <IconButton
+                      label="Color"
+                      icon="🎨"
+                      onClick={() => {
+                        setColorFeedback(initialActionState);
+                        setSelectedColor(bucket.color ?? "");
+                        setBucketToColor(bucket);
+                      }}
+                    />
                     <IconButton label="Eliminar" icon="🗑" onClick={() => setBucketToDelete(bucket)} disabled={!canDeleteBuckets} />
                   </div>
                 ) : null}
@@ -267,10 +443,13 @@ export function UserBucketsGrid({
       {bucketToColor ? (
         <ColorPickerModal
           bucket={bucketToColor}
-          action={colorAction}
-          state={colorState}
-          onClose={() => setBucketToColor(null)}
+          selectedColor={selectedColor}
+          feedback={colorFeedback}
+          onClose={closeColorModal}
+          onSelectColor={setSelectedColor}
+          onConfirm={handleConfirmColor}
           colorOptions={colorOptions}
+          isPending={colorPendingBucketId === bucketToColor.id}
         />
       ) : null}
 
@@ -341,49 +520,62 @@ function BucketModal({ title, description, closeLabel, onClose, action, state, m
 
 function ColorPickerModal({
   bucket,
-  action,
-  state,
+  selectedColor,
+  onSelectColor,
+  onConfirm,
+  feedback,
   onClose,
   colorOptions,
+  isPending,
 }: {
   bucket: UserBucket;
-  action: (payload: FormData) => void;
-  state: ActionState;
+  selectedColor: string;
+  onSelectColor: (color: string) => void;
+  onConfirm: () => void;
+  feedback: ActionState;
   onClose: () => void;
   colorOptions: string[];
+  isPending: boolean;
 }) {
+  const normalizedSelection = selectedColor?.trim() ?? "";
+  const currentColor = bucket.color ?? "";
+  const hasChanges = normalizedSelection !== currentColor;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4">
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900/90 p-6 text-sm shadow-2xl" role="dialog" aria-modal="true">
         <p className="text-base font-semibold text-white">Colores para {bucket.name}</p>
-        <p className="mt-1 text-slate-300">Asigna un color para identificar este bucket en la interfaz.</p>
-        {state.message ? (
-          <p className={`mt-3 text-xs ${state.status === "success" ? "text-emerald-300" : "text-rose-300"}`}>{state.message}</p>
+        <p className="mt-1 text-slate-300">Selecciona un tono y confirma para aplicarlo.</p>
+        {isPending ? <p className="mt-3 text-xs text-emerald-300">Guardando color...</p> : null}
+        {feedback.message ? (
+          <p className={`mt-1 text-xs ${feedback.status === "success" ? "text-emerald-300" : "text-rose-300"}`}>{feedback.message}</p>
         ) : null}
-        <form action={action} className="mt-4 space-y-4">
-          <input type="hidden" name="bucketId" value={bucket.id} />
+        <div className="mt-4 space-y-4">
           <div className="grid grid-cols-5 gap-3">
-            {colorOptions.map((color) => (
-              <button
-                key={color}
-                type="submit"
-                name="color"
-                value={color}
-                className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 transition hover:border-white/40"
-                style={{ backgroundColor: color }}
-                aria-label={`Seleccionar ${color}`}
-              />
-            ))}
+            {colorOptions.map((color) => {
+              const isSelected = normalizedSelection === color;
+              return (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => onSelectColor(color)}
+                  disabled={isPending}
+                  className={`flex h-12 w-12 items-center justify-center rounded-xl border ${isSelected ? "border-white/70 shadow-lg shadow-white/20" : "border-white/10"} transition hover:border-white/40 disabled:cursor-not-allowed disabled:border-white/5`}
+                  style={{ backgroundColor: color }}
+                  aria-label={`Seleccionar ${color}`}
+                />
+              );
+            })}
             <button
-              type="submit"
-              name="color"
-              value=""
-              className="h-12 rounded-xl border border-dashed border-white/20 px-2 text-xs font-semibold text-white transition hover:border-white/40"
+              type="button"
+              onClick={() => onSelectColor("")}
+              disabled={isPending}
+              className={`h-12 rounded-xl border px-2 text-xs font-semibold text-white transition hover:border-white/40 disabled:cursor-not-allowed disabled:border-white/10 ${normalizedSelection === "" ? "border-white/70" : "border-dashed border-white/20"}`}
             >
               Sin color
             </button>
           </div>
-          <div className="flex justify-end">
+          <div className="flex items-center justify-between gap-2">
             <button
               type="button"
               onClick={onClose}
@@ -391,8 +583,16 @@ function ColorPickerModal({
             >
               Cerrar
             </button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={!hasChanges || isPending}
+              className="rounded-full border border-emerald-400/40 bg-emerald-500/20 px-4 py-2 text-xs font-semibold text-emerald-100 transition hover:border-emerald-300 hover:bg-emerald-500/30 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-white/30"
+            >
+              Aceptar
+            </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );

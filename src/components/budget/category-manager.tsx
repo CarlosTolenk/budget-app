@@ -49,8 +49,8 @@ export function CategoryManager({ categories, userBuckets, bucketMode }: Categor
     [userBuckets, bucketMode],
   );
   const selectBuckets = availableBuckets.length ? availableBuckets : userBuckets;
-  const bucketNameMap = useMemo(() => {
-    return new Map(userBuckets.map((bucket) => [bucket.id, bucket.name]));
+  const bucketMetaMap = useMemo(() => {
+    return new Map(userBuckets.map((bucket) => [bucket.id, { name: bucket.name, color: bucket.color }]));
   }, [userBuckets]);
 
   return (
@@ -129,13 +129,18 @@ export function CategoryManager({ categories, userBuckets, bucketMode }: Categor
                 );
               }
 
-              const bucketLabel = bucketNameMap.get(category.userBucketId) ?? "Sin renglón";
+              const bucketMeta = bucketMetaMap.get(category.userBucketId);
+              const bucketLabel = bucketMeta?.name ?? "Sin renglón";
+              const bucketColor = bucketMeta?.color ?? null;
 
               return (
                 <li key={category.id} className="flex flex-col gap-2 rounded-xl border border-white/10 p-3 md:flex-row md:items-center md:justify-between">
                   <div>
                     <p className="font-medium">{category.name}</p>
-                    <p className="text-xs uppercase tracking-wide text-slate-400">{bucketLabel}</p>
+                    <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
+                      {bucketColor ? <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: bucketColor }} aria-hidden /> : null}
+                      {bucketLabel}
+                    </p>
                     <p className="text-xs text-slate-300">Ideal mensual {formatCurrency(safeAmount(category.idealMonthlyAmount))}</p>
                   </div>
                   <div className="flex gap-2">
@@ -172,7 +177,7 @@ export function CategoryManager({ categories, userBuckets, bucketMode }: Categor
             <p className="text-base font-semibold text-white">Eliminar categoría</p>
             <p className="mt-2 text-slate-300">
               ¿Seguro que deseas eliminar <span className="font-semibold text-white">{categoryToDelete.name}</span> del renglón{" "}
-              {bucketNameMap.get(categoryToDelete.userBucketId) ?? "Sin renglón"}? Esta acción no se puede deshacer.
+              {bucketMetaMap.get(categoryToDelete.userBucketId)?.name ?? "Sin renglón"}? Esta acción no se puede deshacer.
             </p>
             {deleteState.status === "error" && deleteState.message && (
               <p className="mt-3 text-xs text-rose-300">{deleteState.message}</p>
