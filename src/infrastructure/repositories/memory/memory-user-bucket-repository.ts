@@ -106,4 +106,45 @@ export class MemoryUserBucketRepository implements UserBucketRepository {
       };
     });
   }
+
+  async updateColor(userId: string, bucketId: string, color: string | null): Promise<UserBucket> {
+    const index = this.buckets.findIndex((bucket) => bucket.id === bucketId && bucket.userId === userId);
+    if (index === -1) {
+      throw new Error("Bucket no encontrado");
+    }
+    const updated: UserBucket = {
+      ...this.buckets[index],
+      color,
+      updatedAt: new Date(),
+    };
+    this.buckets = [...this.buckets.slice(0, index), updated, ...this.buckets.slice(index + 1)];
+    return updated;
+  }
+
+  async reorder(userId: string, orderedIds: string[]): Promise<UserBucket[]> {
+    const buckets = this.buckets.filter((bucket) => bucket.userId === userId).sort((a, b) => a.sortOrder - b.sortOrder);
+    const idSet = new Set(orderedIds);
+    const byId = new Map(buckets.map((bucket) => [bucket.id, bucket]));
+    const ordered: UserBucket[] = [];
+    for (const id of orderedIds) {
+      const bucket = byId.get(id);
+      if (bucket) {
+        ordered.push(bucket);
+        byId.delete(id);
+      }
+    }
+    for (const bucket of buckets) {
+      if (!idSet.has(bucket.id)) {
+        ordered.push(bucket);
+      }
+    }
+    const reordered = ordered.map((bucket, index) => ({
+      ...bucket,
+      sortOrder: index,
+      updatedAt: new Date(),
+    }));
+    const otherBuckets = this.buckets.filter((bucket) => bucket.userId !== userId);
+    this.buckets = [...otherBuckets, ...reordered];
+    return reordered;
+  }
 }

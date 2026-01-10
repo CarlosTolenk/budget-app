@@ -10,4 +10,6 @@ export interface UserBucketRepository {
   markAllAsCustom(userId: string): Promise<void>;
   ensurePresetBuckets(userId: string): Promise<UserBucket[]>;
   activatePresetBuckets(userId: string): Promise<void>;
+  updateColor(userId: string, bucketId: string, color: string | null): Promise<UserBucket>;
+  reorder(userId: string, orderedIds: string[]): Promise<UserBucket[]>;
 }

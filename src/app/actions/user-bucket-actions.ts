@@ -17,6 +17,10 @@ const renameSchema = z.object({
   bucketId: z.string().min(1),
   name: nameSchema,
 });
+const colorSchema = z
+  .string()
+  .transform((value) => value.trim())
+  .refine((value) => value === "" || /^#[0-9a-fA-F]{6}$/.test(value), "Color inválido");
 
 function revalidateBudgetViews() {
   revalidatePath("/budget");
@@ -98,4 +102,40 @@ export async function renameUserBucketAction(_prev: ActionState, formData: FormD
     console.error(error);
     return { status: "error", message: (error as Error).message };
   }
+}
+
+export async function updateBucketColorAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const bucketId = z.string().min(1).parse(formData.get("bucketId"));
+  const colorResult = colorSchema.safeParse(formData.get("color") ?? "");
+  if (!colorResult.success) {
+    return { status: "error", message: colorResult.error.errors[0]?.message ?? "Color inválido" };
+  }
+
+  try {
+    const { appUser } = await requireAuth();
+    const { userBucketRepository } = serverContainer();
+    const bucket = await userBucketRepository.findById(bucketId, appUser.id);
+    if (!bucket) {
+      return { status: "error", message: "Bucket no encontrado" };
+    }
+    if (bucket.mode !== "CUSTOM") {
+      return { status: "error", message: "Solo puedes cambiar el color de buckets personalizados" };
+    }
+    await userBucketRepository.updateColor(appUser.id, bucket.id, colorResult.data || null);
+    revalidateBudgetViews();
+    return { status: "success", message: "Color actualizado" };
+  } catch (error) {
+    console.error(error);
+    return { status: "error", message: (error as Error).message };
+  }
+}
+
+export async function reorderUserBucketsAction(orderedIds: string[]): Promise<void> {
+  if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+    return;
+  }
+  const { appUser } = await requireAuth();
+  const { userBucketRepository } = serverContainer();
+  await userBucketRepository.reorder(appUser.id, orderedIds);
+  revalidateBudgetViews();
 }

@@ -130,6 +130,56 @@ export class PrismaUserBucketRepository implements UserBucketRepository {
     );
   }
 
+  async updateColor(userId: string, bucketId: string, color: string | null): Promise<UserBucket> {
+    const existing = await prisma.userBucket.findFirst({ where: { id: bucketId, userId } });
+    if (!existing) {
+      throw new Error("Bucket no encontrado");
+    }
+    const record = await prisma.userBucket.update({
+      where: { id: bucketId },
+      data: { color },
+    });
+    return this.map(record);
+  }
+
+  async reorder(userId: string, orderedIds: string[]): Promise<UserBucket[]> {
+    const buckets = await prisma.userBucket.findMany({
+      where: { userId },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    });
+    if (!buckets.length) {
+      return [];
+    }
+    const idSet = new Set(orderedIds);
+    const byId = new Map(buckets.map((bucket) => [bucket.id, bucket]));
+    const reordered: typeof buckets = [];
+    for (const id of orderedIds) {
+      const bucket = byId.get(id);
+      if (bucket) {
+        reordered.push(bucket);
+        byId.delete(id);
+      }
+    }
+    for (const bucket of buckets) {
+      if (!idSet.has(bucket.id)) {
+        reordered.push(bucket);
+      }
+    }
+    await prisma.$transaction(
+      reordered.map((bucket, index) =>
+        prisma.userBucket.update({
+          where: { id: bucket.id },
+          data: { sortOrder: index },
+        }),
+      ),
+    );
+    const refreshed = await prisma.userBucket.findMany({
+      where: { userId },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    });
+    return refreshed.map((record) => this.map(record));
+  }
+
   private map(record: {
     id: string;
     userId: string;

@@ -1,7 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
-import { createUserBucketAction, renameUserBucketAction } from "@/app/actions/user-bucket-actions";
+import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
+import {
+  createUserBucketAction,
+  renameUserBucketAction,
+  updateBucketColorAction,
+  reorderUserBucketsAction,
+} from "@/app/actions/user-bucket-actions";
 import { ActionState, initialActionState } from "@/app/actions/action-state";
 import { BucketMode } from "@/domain/users/user";
 import { UserBucket } from "@/domain/user-buckets/user-bucket";
@@ -32,6 +37,9 @@ export function UserBucketsGrid({
   const [bucketToRename, setBucketToRename] = useState<UserBucket | null>(null);
   const [createState, createAction] = useActionState(createUserBucketAction, initialActionState);
   const [renameState, renameAction] = useActionState(renameUserBucketAction, initialActionState);
+  const [colorState, colorAction] = useActionState(updateBucketColorAction, initialActionState);
+  const [bucketToColor, setBucketToColor] = useState<UserBucket | null>(null);
+  const [isReordering, startReorderTransition] = useTransition();
 
   useEffect(() => {
     if (createState.status === "success") {
@@ -47,9 +55,34 @@ export function UserBucketsGrid({
     }
   }, [renameState]);
 
+  useEffect(() => {
+    if (colorState.status === "success") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setBucketToColor(null);
+    }
+  }, [colorState]);
+
   const sortedBuckets = useMemo(() => {
     return [...buckets].sort((a, b) => a.sortOrder - b.sortOrder || a.createdAt.getTime() - b.createdAt.getTime());
   }, [buckets]);
+
+  const handleReorder = (bucketId: string, direction: "up" | "down") => {
+    const order = sortedBuckets.map((bucket) => bucket.id);
+    const index = order.indexOf(bucketId);
+    if (index === -1) {
+      return;
+    }
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= order.length) {
+      return;
+    }
+    [order[index], order[targetIndex]] = [order[targetIndex], order[index]];
+    startReorderTransition(() => {
+      void reorderUserBucketsAction(order);
+    });
+  };
+
+  const colorOptions = ["#e11d48", "#db2777", "#c026d3", "#7c3aed", "#2563eb", "#0ea5e9", "#14b8a6", "#10b981", "#22c55e", "#84cc16"];
 
   return (
     <section className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
@@ -59,6 +92,9 @@ export function UserBucketsGrid({
           <p className="text-sm text-slate-300">
             Visualiza cada renglón y las categorías asignadas en el modo {bucketMode === "PRESET" ? "guiado" : "personalizado"}.
           </p>
+          {bucketMode === "CUSTOM" && isReordering ? (
+            <p className="text-xs text-emerald-300">Guardando nuevo orden...</p>
+          ) : null}
         </div>
         {bucketMode === "CUSTOM" ? (
           <button
@@ -104,18 +140,32 @@ export function UserBucketsGrid({
             return (
               <article key={bucket.id} className="flex h-full flex-col rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                      {bucket.color ? (
+                        <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: bucket.color }} aria-hidden />
+                      ) : null}
                     <p className="text-sm uppercase tracking-wide text-slate-400">{bucketDescription}</p>
                     <h3 className="text-lg font-semibold text-white">{bucketLabel}</h3>
+                    </div>
                   </div>
                   {bucketMode === "CUSTOM" ? (
-                    <button
-                      type="button"
-                      onClick={() => setBucketToRename(bucket)}
-                      className="text-xs font-semibold text-slate-300 underline-offset-2 hover:underline"
-                    >
-                      Renombrar
-                    </button>
+                    <div className="flex flex-wrap justify-end gap-1 text-xs text-white">
+                      <IconButton
+                        label="Subir"
+                        icon="↑"
+                        onClick={() => handleReorder(bucket.id, "up")}
+                        disabled={isReordering || sortedBuckets[0].id === bucket.id}
+                      />
+                      <IconButton
+                        label="Bajar"
+                        icon="↓"
+                        onClick={() => handleReorder(bucket.id, "down")}
+                        disabled={isReordering || sortedBuckets[sortedBuckets.length - 1].id === bucket.id}
+                      />
+                      <IconButton label="Renombrar" icon="✎" onClick={() => setBucketToRename(bucket)} />
+                      <IconButton label="Color" icon="🎨" onClick={() => setBucketToColor(bucket)} />
+                    </div>
                   ) : null}
                 </div>
                 <div className="mt-3 text-sm text-slate-300">
@@ -192,6 +242,16 @@ export function UserBucketsGrid({
           bucket={bucketToRename}
         />
       ) : null}
+
+      {bucketToColor ? (
+        <ColorPickerModal
+          bucket={bucketToColor}
+          action={colorAction}
+          state={colorState}
+          onClose={() => setBucketToColor(null)}
+          colorOptions={colorOptions}
+        />
+      ) : null}
     </section>
   );
 }
@@ -245,5 +305,89 @@ function BucketModal({ title, description, closeLabel, onClose, action, state, m
         </form>
       </div>
     </div>
+  );
+}
+
+function ColorPickerModal({
+  bucket,
+  action,
+  state,
+  onClose,
+  colorOptions,
+}: {
+  bucket: UserBucket;
+  action: (payload: FormData) => void;
+  state: ActionState;
+  onClose: () => void;
+  colorOptions: string[];
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4">
+      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900/90 p-6 text-sm shadow-2xl" role="dialog" aria-modal="true">
+        <p className="text-base font-semibold text-white">Colores para {bucket.name}</p>
+        <p className="mt-1 text-slate-300">Asigna un color para identificar este bucket en la interfaz.</p>
+        {state.message ? (
+          <p className={`mt-3 text-xs ${state.status === "success" ? "text-emerald-300" : "text-rose-300"}`}>{state.message}</p>
+        ) : null}
+        <form action={action} className="mt-4 space-y-4">
+          <input type="hidden" name="bucketId" value={bucket.id} />
+          <div className="grid grid-cols-5 gap-3">
+            {colorOptions.map((color) => (
+              <button
+                key={color}
+                type="submit"
+                name="color"
+                value={color}
+                className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 transition hover:border-white/40"
+                style={{ backgroundColor: color }}
+                aria-label={`Seleccionar ${color}`}
+              />
+            ))}
+            <button
+              type="submit"
+              name="color"
+              value=""
+              className="h-12 rounded-xl border border-dashed border-white/20 px-2 text-xs font-semibold text-white transition hover:border-white/40"
+            >
+              Sin color
+            </button>
+          </div>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold text-white transition hover:border-white/40"
+            >
+              Cerrar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function IconButton({
+  label,
+  icon,
+  onClick,
+  disabled,
+}: {
+  label: string;
+  icon: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="flex h-7 w-7 items-center justify-center rounded-full border border-white/20 text-[11px] transition hover:border-white/50 disabled:cursor-not-allowed disabled:border-white/10 disabled:text-white/30"
+      title={label}
+      aria-label={label}
+    >
+      {icon}
+    </button>
   );
 }
