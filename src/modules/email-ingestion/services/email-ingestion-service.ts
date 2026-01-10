@@ -50,6 +50,7 @@ export class EmailIngestionService {
         const errors: EmailIngestionResult["errors"] = [];
         const bucketCache = new Map<PresetBucketKey, string>();
         const bucketMode = user?.bucketMode ?? "PRESET";
+        const isPresetMode = bucketMode === "PRESET";
         const customBuckets = userBuckets.filter((bucket) => bucket.mode === "CUSTOM");
         const defaultCustomBucketId =
             bucketMode === "CUSTOM" && customBuckets.length
@@ -87,9 +88,9 @@ export class EmailIngestionService {
 
             const categoryId = this.mapCategory(message, rules, categories);
             const category = categoryId ? categories.find((entry) => entry.id === categoryId) : undefined;
-            const presetBucket = category?.bucket ?? parsed.bucket;
+            const presetBucket = isPresetMode ? category?.bucket ?? parsed.bucket : undefined;
             let userBucketId: string | undefined = category?.userBucketId;
-            if (!userBucketId && presetBucket) {
+            if (!userBucketId && presetBucket && isPresetMode) {
                 userBucketId = await this.ensurePresetBucket(userId, presetBucket, bucketCache);
             }
             if (!userBucketId && defaultCustomBucketId) {

@@ -7,7 +7,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { serverContainer } from "@/infrastructure/config/server-container";
 import { BucketMode } from "@/domain/users/user";
 import { presetBucketOrder } from "@/domain/user-buckets/preset-buckets";
-import { MAX_CUSTOM_BUCKETS, UserBucket } from "@/domain/user-buckets/user-bucket";
+import { MAX_CUSTOM_BUCKETS, PresetBucketKey, UserBucket } from "@/domain/user-buckets/user-bucket";
 
 const nameSchema = z
   .string()
@@ -30,7 +30,10 @@ function revalidateBudgetViews() {
   revalidatePath("/transactions");
 }
 
-export async function updateBucketModeAction(mode: BucketMode): Promise<void> {
+export async function updateBucketModeAction(
+  mode: BucketMode,
+  mapping?: Record<string, PresetBucketKey>,
+): Promise<void> {
   const { appUser } = await requireAuth();
   if (appUser.bucketMode === mode) {
     return;
@@ -42,7 +45,7 @@ export async function updateBucketModeAction(mode: BucketMode): Promise<void> {
   } else {
     await userBucketRepository.ensurePresetBuckets(appUser.id);
     await userBucketRepository.activatePresetBuckets(appUser.id);
-    await reassignCustomDataToPreset(appUser.id, container);
+    await reassignCustomDataToPreset(appUser.id, container, mapping);
   }
   await userRepository.update(appUser.id, { bucketMode: mode });
   revalidateBudgetViews();
@@ -175,6 +178,7 @@ export async function deleteUserBucketAction(_prev: ActionState, formData: FormD
 async function reassignCustomDataToPreset(
   userId: string,
   container: ReturnType<typeof serverContainer>,
+  mapping?: Record<string, PresetBucketKey>,
 ): Promise<void> {
   const { userBucketRepository } = container;
   const buckets = await userBucketRepository.listByUserId(userId);
@@ -188,7 +192,9 @@ async function reassignCustomDataToPreset(
 
   for (let index = 0; index < customBuckets.length; index += 1) {
     const source = customBuckets[index];
-    const target = presetBuckets[index % presetBuckets.length];
+    const targetKey = mapping?.[source.id] ?? presetBucketOrder[index % presetBucketOrder.length];
+    const target =
+      presetBuckets.find((bucket) => bucket.presetKey === targetKey) ?? presetBuckets[index % presetBuckets.length];
     await userBucketRepository.transferData(userId, source.id, target.id);
   }
 }

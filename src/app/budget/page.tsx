@@ -71,7 +71,7 @@ export default async function BudgetPage({ searchParams }: BudgetPageProps) {
         <p className="text-base text-slate-300">{headerCopy}</p>
       </header>
 
-      {customBucketsEnabled ? <BucketModeSelector currentMode={appUser.bucketMode} /> : null}
+      {customBucketsEnabled ? <BucketModeSelector currentMode={appUser.bucketMode} customBuckets={customBuckets} /> : null}
 
       {customBucketsEnabled ? (
         <UserBucketsGrid
