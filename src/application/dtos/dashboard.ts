@@ -2,7 +2,7 @@ import { PresetBucketKey, UserBucket } from "@/domain/user-buckets/user-bucket";
 
 export interface BucketProgress {
   bucketId: string;
-  bucket: PresetBucketKey;
+  presetKey?: PresetBucketKey | null;
   bucketDetails: UserBucket;
   spent: number;
   target: number;

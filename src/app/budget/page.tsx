@@ -35,7 +35,7 @@ export default async function BudgetPage({ searchParams }: BudgetPageProps) {
   const incomeMonth = resolveIncomeMonth(incomeMonthParam);
   const container = serverContainer();
   const [summary, categories, incomes, rules, userBuckets] = await Promise.all([
-    container.getDashboardSummaryUseCase.execute({ userId, monthId: incomeMonth }),
+    container.getDashboardSummaryUseCase.execute({ userId, monthId: incomeMonth, bucketMode: appUser.bucketMode }),
     container.listCategoriesUseCase.execute(userId),
     container.listIncomesUseCase.execute(userId, incomeMonth),
     container.listRulesUseCase.execute(userId),

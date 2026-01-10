@@ -2,11 +2,13 @@ import { format, parseISO } from "date-fns";
 import { BudgetRepository, CategoryRepository, TransactionRepository, UserBucketRepository } from "@/domain/repositories";
 import { presetBucketCopy } from "@/domain/user-buckets/preset-buckets";
 import { DashboardSummary } from "../dtos/dashboard";
+import { BucketMode } from "@/domain/users/user";
 
 interface GetDashboardSummaryInput {
   userId: string;
   monthId?: string;
   now?: Date;
+  bucketMode?: BucketMode;
 }
 
 export class GetDashboardSummaryUseCase {
@@ -17,7 +19,7 @@ export class GetDashboardSummaryUseCase {
     private readonly userBucketRepository: UserBucketRepository,
   ) {}
 
-  async execute({ userId, monthId, now = new Date() }: GetDashboardSummaryInput): Promise<DashboardSummary> {
+  async execute({ userId, monthId, now = new Date(), bucketMode = "PRESET" }: GetDashboardSummaryInput): Promise<DashboardSummary> {
     const resolvedMonthId = monthId ?? format(now, "yyyy-MM");
     const [budget, transactions, categories, userBuckets] = await Promise.all([
       this.budgetRepository.getByMonth(resolvedMonthId, userId),
@@ -28,7 +30,10 @@ export class GetDashboardSummaryUseCase {
 
     const income = budget?.income ?? transactions.reduce((sum, t) => sum + (t.amount > 0 ? t.amount : 0), 0);
 
-    const bucketTotals = userBuckets.map((bucket) => {
+    const activeBuckets = userBuckets.filter((bucket) => bucket.mode === bucketMode);
+    const bucketsToSummarize = activeBuckets.length ? activeBuckets : userBuckets;
+
+    const bucketTotals = bucketsToSummarize.map((bucket) => {
       const spent = transactions
         .filter((transaction) => transaction.userBucketId === bucket.id)
         .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
@@ -37,16 +42,15 @@ export class GetDashboardSummaryUseCase {
         .reduce((sum, category) => sum + (category.idealMonthlyAmount ?? 0), 0);
 
       const budgetTarget = budget?.buckets.find((entry) => entry.userBucketId === bucket.id);
-      const fallbackRatio = bucket.presetKey ? presetBucketCopy[bucket.presetKey].targetRatio : null;
-      const target = budgetTarget
-        ? budgetTarget.targetAmount
-        : fallbackRatio
-          ? Number((income * fallbackRatio).toFixed(2))
-          : 0;
+      const fallbackRatio =
+        bucket.mode === "PRESET" && bucket.presetKey ? presetBucketCopy[bucket.presetKey].targetRatio : null;
+      const target =
+        budgetTarget?.targetAmount ??
+        (bucket.mode === "PRESET" && fallbackRatio ? Number((income * fallbackRatio).toFixed(2)) : 0);
 
       return {
         bucketId: bucket.id,
-        bucket: bucket.presetKey ?? "NEEDS",
+        presetKey: bucket.presetKey,
         bucketDetails: bucket,
         spent,
         planned,
@@ -77,7 +81,7 @@ export class GetDashboardSummaryUseCase {
           : daysInMonth;
 
     const nonSavingsSpent = bucketTotals
-      .filter((entry) => entry.bucket !== "SAVINGS")
+      .filter((entry) => entry.presetKey !== "SAVINGS")
       .reduce((sum, entry) => sum + entry.spent, 0);
 
     const totalSavingsRate = income ? 1 - nonSavingsSpent / income : 0;
