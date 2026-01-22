@@ -52,6 +52,8 @@ import { DeleteTransactionDraftUseCase } from "@/application/use-cases/delete-tr
 import { DeleteScheduledTransactionUseCase } from "@/application/use-cases/delete-scheduled-transaction";
 import { UpdateRuleUseCase } from "@/application/use-cases/update-rule";
 import { DeleteRuleUseCase } from "@/application/use-cases/delete-rule";
+import { SimulateDebtUseCase } from "@/application/use-cases/simulate-debt";
+import { PlanDebtStrategiesUseCase } from "@/application/use-cases/plan-debt-strategies";
 import { UserRepository } from "@/domain/repositories/user-repository";
 import { PrismaUserRepository } from "@/infrastructure/repositories/prisma/prisma-user-repository";
 import { MemoryUserRepository } from "@/infrastructure/repositories/memory/memory-user-repository";
@@ -92,6 +94,8 @@ interface ServerContainer {
   userRepository: UserRepository;
   userBucketRepository: UserBucketRepository;
   gmailCredentialRepository: GmailCredentialRepository;
+  simulateDebtUseCase: SimulateDebtUseCase;
+  planDebtStrategiesUseCase: PlanDebtStrategiesUseCase;
 }
 
 let cachedContainer: ServerContainer | null = null;
@@ -190,6 +194,8 @@ export function serverContainer(): ServerContainer {
     userRepository,
     userBucketRepository,
     gmailCredentialRepository,
+    simulateDebtUseCase: new SimulateDebtUseCase(),
+    planDebtStrategiesUseCase: new PlanDebtStrategiesUseCase(),
   };
 
   return cachedContainer;

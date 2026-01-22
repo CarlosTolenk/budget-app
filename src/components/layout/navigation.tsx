@@ -12,6 +12,7 @@ const links = [
   { href: "/budget", label: "Presupuesto" },
   { href: "/transactions", label: "Transacciones" },
   { href: "/stats", label: "Estadísticas" },
+  { href: "/debt-analysis", label: "Deudas" },
 ];
 
 type RenderOptions = {
