@@ -8,7 +8,20 @@ import { planDebtStrategiesAction } from "@/app/actions/debt-analysis-actions";
 const DEFAULT_CURRENCY: Debt["currency"] = "DOP";
 const DEFAULT_APR: Debt["aprType"] = "nominal";
 
-const emptyDebtDraft = (startDate: string) => ({
+type DebtDraft = {
+  id: string;
+  name: string;
+  principal: string;
+  annualRate: string;
+  startDate: string;
+  termMonths: string;
+  minPayment: string;
+  feesMonthly: string;
+  currency: Debt["currency"];
+  aprType: Debt["aprType"];
+};
+
+const emptyDebtDraft = (startDate: string): DebtDraft => ({
   id: "",
   name: "",
   principal: "",
@@ -21,11 +34,18 @@ const emptyDebtDraft = (startDate: string) => ({
   aprType: DEFAULT_APR,
 });
 
-const emptyExtraDraft = (applyTo: string) => ({
+type ExtraDraft = {
+  applyTo: string;
+  date: string;
+  amount: string;
+  mode: ExtraPayment["mode"];
+};
+
+const emptyExtraDraft = (applyTo: string): ExtraDraft => ({
   applyTo,
   date: "",
   amount: "",
-  mode: "reduce_term" as const,
+  mode: "reduce_term",
 });
 
 function createId() {
