@@ -37,6 +37,9 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
   ]);
   const gmailConnectUrl = "/api/oauth/google/start?redirectTo=/transactions";
   const isGmailConnected = Boolean(gmailCredential);
+  const activeBuckets = userBuckets.filter((bucket) => bucket.mode === appUser.bucketMode);
+  const activeBucketIds = new Set(activeBuckets.map((bucket) => bucket.id));
+  const activeCategories = categories.filter((category) => activeBucketIds.has(category.userBucketId));
 
   return (
     <div className="flex flex-col gap-8">
@@ -65,10 +68,10 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
         manual={transactions}
         scheduled={scheduled}
         drafts={drafts}
-        categories={categories}
+        categories={activeCategories}
         gmailConnectUrl={gmailConnectUrl}
         isGmailConnected={isGmailConnected}
-        userBuckets={userBuckets}
+        userBuckets={activeBuckets}
       />
     </div>
   );
