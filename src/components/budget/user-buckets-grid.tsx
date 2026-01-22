@@ -89,6 +89,19 @@ export function UserBucketsGrid({
   const sortedBuckets = useMemo(() => {
     return [...visibleBuckets].sort((a, b) => a.sortOrder - b.sortOrder || a.createdAt.getTime() - b.createdAt.getTime());
   }, [visibleBuckets]);
+  const { plannedByBucketId, totalPlanned } = useMemo(() => {
+    const map = new Map<string, number>();
+    let total = 0;
+    sortedBuckets.forEach((bucket) => {
+      const summary = bucketSummaries[bucket.id];
+      const categories = categoriesByBucketId[bucket.id] ?? [];
+      const planned =
+        summary?.planned ?? categories.reduce((sum, category) => sum + (category.idealMonthlyAmount ?? 0), 0);
+      map.set(bucket.id, planned);
+      total += planned;
+    });
+    return { plannedByBucketId: map, totalPlanned: total };
+  }, [sortedBuckets, bucketSummaries, categoriesByBucketId]);
 
   const closeColorModal = () => {
     setBucketToColor(null);
@@ -302,12 +315,13 @@ export function UserBucketsGrid({
             const bucketLabel = showPresetDetails && bucket.presetKey ? presetBucketCopy[bucket.presetKey].label : bucket.name;
             const bucketDescription =
               showPresetDetails && bucket.presetKey ? presetBucketCopy[bucket.presetKey].description : null;
-            const planned = summary?.planned ?? categories.reduce((sum, category) => sum + (category.idealMonthlyAmount ?? 0), 0);
+            const planned = plannedByBucketId.get(bucket.id) ?? 0;
             const spent = summary?.spent ?? 0;
             const target = summary?.target ?? 0;
             const delta = target - spent;
             const planDelta = planned - spent;
             const showTarget = bucketMode === "PRESET" && Boolean(target);
+            const plannedShare = totalPlanned > 0 ? planned / totalPlanned : 0;
 
             return (
               <article
@@ -369,6 +383,9 @@ export function UserBucketsGrid({
                   <p>
                     {bucketMode === "PRESET" ? "Plan ideal" : "Planificado"}{" "}
                     <span className="font-semibold text-white">{formatCurrency(planned)}</span>
+                    {bucketMode === "CUSTOM" ? (
+                      <span className="text-xs text-slate-400"> · {formatPercent(plannedShare)}</span>
+                    ) : null}
                   </p>
                   {showTarget ? (
                     <p>
