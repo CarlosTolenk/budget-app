@@ -45,17 +45,17 @@ ALTER TABLE "Rule" ADD COLUMN     "userBucketId" TEXT;
 
 -- Seed preset buckets per user (Necesarios, Prescindibles, Ahorro)
 INSERT INTO "UserBucket" ("id", "userId", "name", "sortOrder", "mode", "presetKey", "createdAt", "updatedAt")
-SELECT CONCAT('c', encode(gen_random_bytes(16), 'hex')), "User"."id", 'Necesarios', 0, 'PRESET', 'NEEDS', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+SELECT CONCAT('c', md5(random()::text || clock_timestamp()::text)), "User"."id", 'Necesarios', 0, 'PRESET', 'NEEDS', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM "User"
 ON CONFLICT DO NOTHING;
 
 INSERT INTO "UserBucket" ("id", "userId", "name", "sortOrder", "mode", "presetKey", "createdAt", "updatedAt")
-SELECT CONCAT('c', encode(gen_random_bytes(16), 'hex')), "User"."id", 'Prescindibles', 1, 'PRESET', 'WANTS', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+SELECT CONCAT('c', md5(random()::text || clock_timestamp()::text)), "User"."id", 'Prescindibles', 1, 'PRESET', 'WANTS', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM "User"
 ON CONFLICT DO NOTHING;
 
 INSERT INTO "UserBucket" ("id", "userId", "name", "sortOrder", "mode", "presetKey", "createdAt", "updatedAt")
-SELECT CONCAT('c', encode(gen_random_bytes(16), 'hex')), "User"."id", 'Ahorro', 2, 'PRESET', 'SAVINGS', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+SELECT CONCAT('c', md5(random()::text || clock_timestamp()::text)), "User"."id", 'Ahorro', 2, 'PRESET', 'SAVINGS', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM "User"
 ON CONFLICT DO NOTHING;
 
@@ -92,17 +92,17 @@ WHERE r."categoryId" = c."id";
 
 -- Backfill BudgetBucket rows from legacy targets
 INSERT INTO "BudgetBucket" ("id", "budgetId", "userBucketId", "targetAmount", "createdAt", "updatedAt")
-SELECT CONCAT('c', encode(gen_random_bytes(16), 'hex')), b."id", ub."id", b."needsTarget", CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+SELECT CONCAT('c', md5(random()::text || clock_timestamp()::text)), b."id", ub."id", b."needsTarget", CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM "Budget" b
 JOIN "UserBucket" ub ON ub."userId" = b."userId" AND ub."presetKey" = 'NEEDS';
 
 INSERT INTO "BudgetBucket" ("id", "budgetId", "userBucketId", "targetAmount", "createdAt", "updatedAt")
-SELECT CONCAT('c', encode(gen_random_bytes(16), 'hex')), b."id", ub."id", b."wantsTarget", CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+SELECT CONCAT('c', md5(random()::text || clock_timestamp()::text)), b."id", ub."id", b."wantsTarget", CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM "Budget" b
 JOIN "UserBucket" ub ON ub."userId" = b."userId" AND ub."presetKey" = 'WANTS';
 
 INSERT INTO "BudgetBucket" ("id", "budgetId", "userBucketId", "targetAmount", "createdAt", "updatedAt")
-SELECT CONCAT('c', encode(gen_random_bytes(16), 'hex')), b."id", ub."id", b."savingsTarget", CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+SELECT CONCAT('c', md5(random()::text || clock_timestamp()::text)), b."id", ub."id", b."savingsTarget", CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM "Budget" b
 JOIN "UserBucket" ub ON ub."userId" = b."userId" AND ub."presetKey" = 'SAVINGS';
 

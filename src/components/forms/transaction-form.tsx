@@ -7,6 +7,7 @@ import { Category } from "@/domain/categories/category";
 import { UserBucket } from "@/domain/user-buckets/user-bucket";
 import { formatAppDateInput } from "@/lib/dates/timezone";
 import { pickDefaultUserBucketId } from "@/lib/buckets/user-bucket-helpers";
+import { AmountInput } from "@/components/forms/amount-input";
 
 interface TransactionFormProps {
   categories: Category[];
@@ -63,9 +64,7 @@ export function TransactionForm({ categories, userBuckets }: TransactionFormProp
         </label>
         <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-slate-400">
           Monto
-          <input
-            type="number"
-            step="0.01"
+          <AmountInput
             name="amount"
             className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
             placeholder="120.50"

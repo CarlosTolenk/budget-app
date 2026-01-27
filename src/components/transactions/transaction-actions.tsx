@@ -10,6 +10,7 @@ import { initialActionState, type ActionState } from "@/app/actions/action-state
 import { ModalConfirmButton } from "@/components/ui/modal-confirm-button";
 import { formatAppDateInput } from "@/lib/dates/timezone";
 import { UserBucket } from "@/domain/user-buckets/user-bucket";
+import { AmountInput } from "@/components/forms/amount-input";
 
 interface TransactionActionsProps {
   transaction: Transaction;
@@ -102,9 +103,7 @@ export function TransactionActions({ transaction, categories, userBuckets }: Tra
           </label>
           <label className="flex flex-col gap-1 text-[11px] uppercase tracking-wide text-slate-400">
             Monto
-            <input
-              type="number"
-              step="0.01"
+            <AmountInput
               name="amount"
               defaultValue={Math.abs(transaction.amount)}
               className="rounded-lg border border-white/10 bg-white/10 px-3 py-1 text-white"

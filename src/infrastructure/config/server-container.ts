@@ -17,6 +17,11 @@ import { GetYearlyOverviewUseCase } from "@/application/use-cases/get-yearly-ove
 import { GetFinancialStatsUseCase } from "@/application/use-cases/get-financial-stats";
 import { UpdateIncomeUseCase } from "@/application/use-cases/update-income";
 import { DeleteIncomeUseCase } from "@/application/use-cases/delete-income";
+import { GetNetWorthSnapshotUseCase } from "@/application/use-cases/get-net-worth-snapshot";
+import { CreateNetWorthSnapshotUseCase } from "@/application/use-cases/create-net-worth-snapshot";
+import { CreateNetWorthItemUseCase } from "@/application/use-cases/create-net-worth-item";
+import { UpdateNetWorthItemUseCase } from "@/application/use-cases/update-net-worth-item";
+import { DeleteNetWorthItemUseCase } from "@/application/use-cases/delete-net-worth-item";
 import { PrismaTransactionRepository } from "@/infrastructure/repositories/prisma/prisma-transaction-repository";
 import { PrismaBudgetRepository } from "@/infrastructure/repositories/prisma/prisma-budget-repository";
 import { PrismaCategoryRepository } from "@/infrastructure/repositories/prisma/prisma-category-repository";
@@ -28,6 +33,7 @@ import { MemoryCategoryRepository } from "@/infrastructure/repositories/memory/m
 import { MemoryRuleRepository } from "@/infrastructure/repositories/memory/memory-rule-repository";
 import { MemoryUserBucketRepository } from "@/infrastructure/repositories/memory/memory-user-bucket-repository";
 import { MemoryIncomeRepository } from "@/infrastructure/repositories/memory/memory-income-repository";
+import { MemoryNetWorthRepository } from "@/infrastructure/repositories/memory/memory-net-worth-repository";
 import { GmailProvider } from "@/infrastructure/email/gmail-provider";
 import { GenericBankAdapter } from "@/modules/email-ingestion/adapters/generic-bank-adapter";
 import { BancoPopularAdapter } from "@/modules/email-ingestion/adapters/banco-popular-adapter";
@@ -41,6 +47,7 @@ import { env } from "@/infrastructure/config/env";
 import { PrismaIncomeRepository } from "@/infrastructure/repositories/prisma/prisma-income-repository";
 import { PrismaScheduledTransactionRepository } from "@/infrastructure/repositories/prisma/prisma-scheduled-transaction-repository";
 import { PrismaTransactionDraftRepository } from "@/infrastructure/repositories/prisma/prisma-transaction-draft-repository";
+import { PrismaNetWorthRepository } from "@/infrastructure/repositories/prisma/prisma-net-worth-repository";
 import { MemoryScheduledTransactionRepository } from "@/infrastructure/repositories/memory/memory-scheduled-transaction-repository";
 import { MemoryTransactionDraftRepository } from "@/infrastructure/repositories/memory/memory-transaction-draft-repository";
 import { CreateScheduledTransactionUseCase } from "@/application/use-cases/create-scheduled-transaction";
@@ -82,6 +89,11 @@ interface ServerContainer {
   listIncomesUseCase: ListIncomesUseCase;
   getYearlyOverviewUseCase: GetYearlyOverviewUseCase;
   getFinancialStatsUseCase: GetFinancialStatsUseCase;
+  getNetWorthSnapshotUseCase: GetNetWorthSnapshotUseCase;
+  createNetWorthSnapshotUseCase: CreateNetWorthSnapshotUseCase;
+  createNetWorthItemUseCase: CreateNetWorthItemUseCase;
+  updateNetWorthItemUseCase: UpdateNetWorthItemUseCase;
+  deleteNetWorthItemUseCase: DeleteNetWorthItemUseCase;
   updateTransactionUseCase: UpdateTransactionUseCase;
   deleteTransactionUseCase: DeleteTransactionUseCase;
   createScheduledTransactionUseCase: CreateScheduledTransactionUseCase;
@@ -113,6 +125,7 @@ export function serverContainer(): ServerContainer {
   const ruleRepository = hasDatabase ? new PrismaRuleRepository() : new MemoryRuleRepository();
   const userBucketRepository = hasDatabase ? new PrismaUserBucketRepository() : new MemoryUserBucketRepository();
   const incomeRepository = hasDatabase ? new PrismaIncomeRepository() : new MemoryIncomeRepository();
+  const netWorthRepository = hasDatabase ? new PrismaNetWorthRepository() : new MemoryNetWorthRepository();
   const scheduledTransactionRepository = hasDatabase
     ? new PrismaScheduledTransactionRepository()
     : new MemoryScheduledTransactionRepository();
@@ -180,6 +193,11 @@ export function serverContainer(): ServerContainer {
     deleteIncomeUseCase: new DeleteIncomeUseCase(incomeRepository, budgetRepository, userBucketRepository),
     listIncomesUseCase: new ListIncomesUseCase(incomeRepository),
     getYearlyOverviewUseCase: new GetYearlyOverviewUseCase(incomeRepository, transactionRepository),
+    getNetWorthSnapshotUseCase: new GetNetWorthSnapshotUseCase(netWorthRepository),
+    createNetWorthSnapshotUseCase: new CreateNetWorthSnapshotUseCase(netWorthRepository),
+    createNetWorthItemUseCase: new CreateNetWorthItemUseCase(netWorthRepository),
+    updateNetWorthItemUseCase: new UpdateNetWorthItemUseCase(netWorthRepository),
+    deleteNetWorthItemUseCase: new DeleteNetWorthItemUseCase(netWorthRepository),
     createScheduledTransactionUseCase: new CreateScheduledTransactionUseCase(scheduledTransactionRepository),
     listScheduledTransactionsUseCase: new ListScheduledTransactionsUseCase(scheduledTransactionRepository),
     runScheduledTransactionsUseCase: new RunScheduledTransactionsUseCase(

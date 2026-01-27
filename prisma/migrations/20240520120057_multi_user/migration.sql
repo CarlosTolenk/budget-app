@@ -3,6 +3,7 @@ CREATE TABLE "User" (
     "id" TEXT NOT NULL,
     "supabaseUserId" TEXT,
     "email" TEXT,
+    "bucketMode" "BucketMode" NOT NULL DEFAULT 'PRESET',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")

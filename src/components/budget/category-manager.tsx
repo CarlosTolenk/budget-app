@@ -6,6 +6,7 @@ import type { Category } from "@/domain/categories/category";
 import { initialActionState } from "@/app/actions/action-state";
 import { deleteCategoryAction, updateCategoryAction } from "@/app/actions/category-actions";
 import { formatCurrency } from "@/lib/format";
+import { AmountInput } from "@/components/forms/amount-input";
 import { ModalConfirmButton } from "@/components/ui/modal-confirm-button";
 import { UserBucket } from "@/domain/user-buckets/user-bucket";
 import { BucketMode } from "@/domain/users/user";
@@ -103,11 +104,8 @@ export function CategoryManager({ categories, userBuckets, bucketMode }: Categor
                       </label>
                       <label className="text-[11px] uppercase tracking-wide text-slate-400">
                         Monto ideal
-                        <input
+                        <AmountInput
                           name="idealMonthlyAmount"
-                          type="number"
-                          min={0}
-                          step="0.01"
                           defaultValue={safeAmount(category.idealMonthlyAmount)}
                           className="mt-1 w-32 rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
                         />

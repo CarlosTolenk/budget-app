@@ -7,6 +7,7 @@ import { ScheduledTransaction } from "@/domain/scheduled-transactions/scheduled-
 import { TransactionDraft } from "@/domain/transaction-drafts/transaction-draft";
 import { AppUser } from "@/domain/users/user";
 import { UserBucket } from "@/domain/user-buckets/user-bucket";
+import { NetWorthItem, NetWorthSnapshot } from "@/domain/net-worth/net-worth";
 
 const now = new Date();
 const monthId = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -240,6 +241,53 @@ export const memoryScheduledTransactions: ScheduledTransaction[] = [
     nextRunDate: new Date(now.getFullYear(), now.getMonth(), 1),
     endDate: null,
     active: true,
+    createdAt: now,
+    updatedAt: now,
+  },
+];
+
+export const memoryNetWorthSnapshots: NetWorthSnapshot[] = [
+  {
+    id: "net-worth-1",
+    userId: memoryUserId,
+    month: monthId,
+    currency: "DOP",
+    createdAt: now,
+    updatedAt: now,
+  },
+];
+
+export const memoryNetWorthItems: NetWorthItem[] = [
+  {
+    id: "net-worth-item-1",
+    snapshotId: "net-worth-1",
+    category: "ASSET",
+    name: "Cuenta ahorro",
+    amount: 3200,
+    entity: "Banco Popular",
+    note: "Fondo de emergencia",
+    createdAt: now,
+    updatedAt: now,
+  },
+  {
+    id: "net-worth-item-2",
+    snapshotId: "net-worth-1",
+    category: "LIQUIDITY",
+    name: "Efectivo",
+    amount: 400,
+    entity: "Billetera",
+    note: null,
+    createdAt: now,
+    updatedAt: now,
+  },
+  {
+    id: "net-worth-item-3",
+    snapshotId: "net-worth-1",
+    category: "DEBT",
+    name: "Tarjeta VISA",
+    amount: 1200,
+    entity: "Banco Santa Cruz",
+    note: "Pago mínimo pendiente",
     createdAt: now,
     updatedAt: now,
   },

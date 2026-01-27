@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { formatCurrency, formatMonthLabel } from "@/lib/format";
+import { AmountInput } from "@/components/forms/amount-input";
 import type { Debt, DebtPlanInput, ExtraPayment, StrategyComparison } from "@/modules/debt-analysis";
 import { planDebtStrategiesAction } from "@/app/actions/debt-analysis-actions";
 
@@ -281,12 +282,10 @@ export function DebtAnalysisClient() {
             </label>
             <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-slate-400">
               Principal
-              <input
-                type="number"
-                step="0.01"
-                className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
+              <AmountInput
                 value={debtDraft.principal}
-                onChange={(event) => setDebtDraft((prev) => ({ ...prev, principal: event.target.value }))}
+                onValueChange={(value) => setDebtDraft((prev) => ({ ...prev, principal: value }))}
+                className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
                 placeholder="25000"
               />
             </label>
@@ -328,17 +327,15 @@ export function DebtAnalysisClient() {
               </label>
               <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-slate-400">
                 Pago mínimo
-                <input
-                  type="number"
-                  step="0.01"
-                  className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
+                <AmountInput
                   value={debtDraft.minPayment}
-                  onChange={(event) =>
+                  onValueChange={(value) =>
                     setDebtDraft((prev) => ({
                       ...prev,
-                      minPayment: event.target.value,
+                      minPayment: value,
                     }))
                   }
+                  className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
                   placeholder="650"
                 />
               </label>
@@ -346,12 +343,10 @@ export function DebtAnalysisClient() {
             <div className="grid gap-3 md:grid-cols-2">
               <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-slate-400">
                 Fee mensual
-                <input
-                  type="number"
-                  step="0.01"
-                  className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
+                <AmountInput
                   value={debtDraft.feesMonthly}
-                  onChange={(event) => setDebtDraft((prev) => ({ ...prev, feesMonthly: event.target.value }))}
+                  onValueChange={(value) => setDebtDraft((prev) => ({ ...prev, feesMonthly: value }))}
+                  className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
                   placeholder="0"
                 />
               </label>
@@ -483,12 +478,10 @@ export function DebtAnalysisClient() {
             </label>
             <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-slate-400">
               Monto extra
-              <input
-                type="number"
-                step="0.01"
-                className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
+              <AmountInput
                 value={extraDraft.amount}
-                onChange={(event) => setExtraDraft((prev) => ({ ...prev, amount: event.target.value }))}
+                onValueChange={(value) => setExtraDraft((prev) => ({ ...prev, amount: value }))}
+                className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
                 placeholder="1500"
               />
             </label>
@@ -568,12 +561,10 @@ export function DebtAnalysisClient() {
               onChange={(event) => setBudgetStartMonth(event.target.value)}
               aria-label="Aplicar extra desde"
             />
-            <input
-              type="number"
-              step="0.01"
-              className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-white"
+            <AmountInput
               value={monthlyExtraBudget}
-              onChange={(event) => setMonthlyExtraBudget(event.target.value)}
+              onValueChange={(value) => setMonthlyExtraBudget(value)}
+              className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-white"
               placeholder="Extra mensual"
             />
             <button

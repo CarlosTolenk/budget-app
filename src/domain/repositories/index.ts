@@ -8,3 +8,4 @@ export * from "./transaction-draft-repository";
 export * from "./user-bucket-repository";
 export * from "./user-repository";
 export * from "./gmail-credential-repository";
+export * from "./net-worth-repository";

@@ -7,6 +7,7 @@ import { createScheduledTransactionAction } from "@/app/actions/scheduled-transa
 import { initialActionState } from "@/app/actions/action-state";
 import { formatAppDateInput } from "@/lib/dates/timezone";
 import { pickDefaultUserBucketId } from "@/lib/buckets/user-bucket-helpers";
+import { AmountInput } from "@/components/forms/amount-input";
 
 export function ScheduledTransactionForm({ categories, userBuckets }: { categories: Category[]; userBuckets: UserBucket[] }) {
   const orderedBuckets = useMemo(
@@ -51,7 +52,12 @@ export function ScheduledTransactionForm({ categories, userBuckets }: { categori
       <div className="grid gap-3 md:grid-cols-2">
         <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-slate-400">
           Monto
-          <input name="amount" type="number" step="0.01" className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white" placeholder="500" required />
+          <AmountInput
+            name="amount"
+            className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
+            placeholder="500"
+            required
+          />
           <span className="text-[11px] text-slate-400">Ingresa el monto positivo, lo descontaremos al ejecutarse.</span>
         </label>
         <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-slate-400">

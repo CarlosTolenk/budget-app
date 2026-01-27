@@ -18,6 +18,7 @@ import { initialActionState } from "@/app/actions/action-state";
 import { importEmailsAction } from "@/app/actions/import-email-actions";
 import { disconnectGmailAction } from "@/app/actions/gmail-credential-actions";
 import { useRouter } from "next/navigation";
+import { AmountInput } from "@/components/forms/amount-input";
 
 const sourceDisplay: Record<TransactionSource, { label: string; badgeClass: string }> = {
   MANUAL: { label: "Manual", badgeClass: "bg-slate-100/10 text-slate-100" },
@@ -272,11 +273,10 @@ function ManualPanel({
 
           <label className="text-xs text-slate-300">
             Monto mínimo
-            <input
-              type="number"
+            <AmountInput
               value={minAmount}
-              onChange={(event) => {
-                setMinAmount(event.target.value);
+              onValueChange={(value) => {
+                setMinAmount(value);
                 setPage(1);
               }}
               placeholder="0"
@@ -285,11 +285,10 @@ function ManualPanel({
           </label>
           <label className="text-xs text-slate-300">
             Monto máximo
-            <input
-              type="number"
+            <AmountInput
               value={maxAmount}
-              onChange={(event) => {
-                setMaxAmount(event.target.value);
+              onValueChange={(value) => {
+                setMaxAmount(value);
                 setPage(1);
               }}
               placeholder="0"
@@ -748,16 +747,14 @@ function DraftCard({
                 className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white date-input"
               />
             </label>
-        <label className="flex flex-col gap-1 text-[11px] uppercase tracking-wide text-slate-400">
-          Monto
-          <input
-            type="number"
-            step="0.01"
-            name="amount"
-            defaultValue={Math.abs(draft.amount)}
-            className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
-          />
-        </label>
+            <label className="flex flex-col gap-1 text-[11px] uppercase tracking-wide text-slate-400">
+              Monto
+              <AmountInput
+                name="amount"
+                defaultValue={Math.abs(draft.amount)}
+                className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
+              />
+            </label>
             <label className="flex flex-col gap-1 text-[11px] uppercase tracking-wide text-slate-400">
               Renglón
               <select

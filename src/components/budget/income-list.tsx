@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState } from "react";
 import type { Income } from "@/domain/income/income";
 import { formatCurrency, formatMonthLabel } from "@/lib/format";
+import { AmountInput } from "@/components/forms/amount-input";
 import { initialActionState } from "@/app/actions/action-state";
 import { updateIncomeAction, deleteIncomeAction } from "@/app/actions/income-actions";
 import { ModalConfirmButton } from "@/components/ui/modal-confirm-button";
@@ -60,9 +61,7 @@ export function IncomeList({ incomes }: IncomeListProps) {
                   </label>
                   <label className="flex-1 text-xs uppercase tracking-wide text-slate-400">
                     Monto
-                    <input
-                      type="number"
-                      step="0.01"
+                    <AmountInput
                       name="amount"
                       defaultValue={income.amount}
                       className="mt-1 w-full rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white"
