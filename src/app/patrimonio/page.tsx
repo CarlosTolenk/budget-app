@@ -5,6 +5,7 @@ import { serverContainer } from "@/infrastructure/config/server-container";
 import { formatMonthLabel } from "@/lib/format";
 import { NetWorthSetup } from "@/components/net-worth/net-worth-setup";
 import { NetWorthClient } from "@/components/net-worth/net-worth-client";
+import { NetWorthHistoryChart } from "@/components/net-worth/net-worth-history-chart";
 
 type NetWorthPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -29,7 +30,14 @@ export default async function NetWorthPage({ searchParams }: NetWorthPageProps) 
   const month = resolveMonth(monthParam);
 
   const container = serverContainer();
-  const snapshot = await container.getNetWorthSnapshotUseCase.execute({ userId: appUser.id, month });
+  const [snapshot, history] = await Promise.all([
+    container.getNetWorthSnapshotUseCase.execute({ userId: appUser.id, month }),
+    container.getNetWorthHistoryUseCase.execute({
+      userId: appUser.id,
+      months: 6,
+      fallbackCurrency: "DOP",
+    }),
+  ]);
 
   return (
     <div className="flex flex-col gap-8">
@@ -61,6 +69,8 @@ export default async function NetWorthPage({ searchParams }: NetWorthPageProps) 
           </button>
         </form>
       </section>
+
+      {history.length ? <NetWorthHistoryChart data={history} /> : null}
 
       {!snapshot ? <NetWorthSetup month={month} /> : <NetWorthClient snapshot={snapshot} items={snapshot.items} />}
     </div>

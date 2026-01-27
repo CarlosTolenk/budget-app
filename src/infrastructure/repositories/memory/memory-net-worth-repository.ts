@@ -17,6 +17,19 @@ export class MemoryNetWorthRepository implements NetWorthRepository {
     };
   }
 
+  async listSnapshotsByMonths(userId: string, months: string[]): Promise<NetWorthSnapshotWithItems[]> {
+    if (!months.length) {
+      return [];
+    }
+    return this.snapshots
+      .filter((snapshot) => snapshot.userId === userId && months.includes(snapshot.month))
+      .sort((a, b) => a.month.localeCompare(b.month))
+      .map((snapshot) => ({
+        ...snapshot,
+        items: this.items.filter((item) => item.snapshotId === snapshot.id),
+      }));
+  }
+
   async createSnapshot(input: { userId: string; month: string; currency: string }): Promise<NetWorthSnapshot> {
     const snapshot: NetWorthSnapshot = {
       id: `nws-${Math.random().toString(36).slice(2)}`,

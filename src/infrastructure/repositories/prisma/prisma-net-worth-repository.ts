@@ -14,6 +14,18 @@ export class PrismaNetWorthRepository implements NetWorthRepository {
     return this.mapSnapshot(record);
   }
 
+  async listSnapshotsByMonths(userId: string, months: string[]): Promise<NetWorthSnapshotWithItems[]> {
+    if (months.length === 0) {
+      return [];
+    }
+    const records = await prisma.netWorthSnapshot.findMany({
+      where: { userId, month: { in: months } },
+      include: { items: { orderBy: { createdAt: "desc" } } },
+      orderBy: { month: "asc" },
+    });
+    return records.map((record) => this.mapSnapshot(record));
+  }
+
   async createSnapshot(input: { userId: string; month: string; currency: string }): Promise<NetWorthSnapshot> {
     const record = await prisma.netWorthSnapshot.create({
       data: {

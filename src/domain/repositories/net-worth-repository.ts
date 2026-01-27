@@ -2,6 +2,7 @@ import { NetWorthCategory, NetWorthItem, NetWorthSnapshot, NetWorthSnapshotWithI
 
 export interface NetWorthRepository {
   getSnapshotByMonth(userId: string, month: string): Promise<NetWorthSnapshotWithItems | null>;
+  listSnapshotsByMonths(userId: string, months: string[]): Promise<NetWorthSnapshotWithItems[]>;
   createSnapshot(input: { userId: string; month: string; currency: string }): Promise<NetWorthSnapshot>;
   createItem(input: {
     userId: string;

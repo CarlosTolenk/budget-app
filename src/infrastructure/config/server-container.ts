@@ -22,6 +22,7 @@ import { CreateNetWorthSnapshotUseCase } from "@/application/use-cases/create-ne
 import { CreateNetWorthItemUseCase } from "@/application/use-cases/create-net-worth-item";
 import { UpdateNetWorthItemUseCase } from "@/application/use-cases/update-net-worth-item";
 import { DeleteNetWorthItemUseCase } from "@/application/use-cases/delete-net-worth-item";
+import { GetNetWorthHistoryUseCase } from "@/application/use-cases/get-net-worth-history";
 import { PrismaTransactionRepository } from "@/infrastructure/repositories/prisma/prisma-transaction-repository";
 import { PrismaBudgetRepository } from "@/infrastructure/repositories/prisma/prisma-budget-repository";
 import { PrismaCategoryRepository } from "@/infrastructure/repositories/prisma/prisma-category-repository";
@@ -94,6 +95,7 @@ interface ServerContainer {
   createNetWorthItemUseCase: CreateNetWorthItemUseCase;
   updateNetWorthItemUseCase: UpdateNetWorthItemUseCase;
   deleteNetWorthItemUseCase: DeleteNetWorthItemUseCase;
+  getNetWorthHistoryUseCase: GetNetWorthHistoryUseCase;
   updateTransactionUseCase: UpdateTransactionUseCase;
   deleteTransactionUseCase: DeleteTransactionUseCase;
   createScheduledTransactionUseCase: CreateScheduledTransactionUseCase;
@@ -198,6 +200,7 @@ export function serverContainer(): ServerContainer {
     createNetWorthItemUseCase: new CreateNetWorthItemUseCase(netWorthRepository),
     updateNetWorthItemUseCase: new UpdateNetWorthItemUseCase(netWorthRepository),
     deleteNetWorthItemUseCase: new DeleteNetWorthItemUseCase(netWorthRepository),
+    getNetWorthHistoryUseCase: new GetNetWorthHistoryUseCase(netWorthRepository),
     createScheduledTransactionUseCase: new CreateScheduledTransactionUseCase(scheduledTransactionRepository),
     listScheduledTransactionsUseCase: new ListScheduledTransactionsUseCase(scheduledTransactionRepository),
     runScheduledTransactionsUseCase: new RunScheduledTransactionsUseCase(
